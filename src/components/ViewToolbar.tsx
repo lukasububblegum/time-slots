@@ -53,7 +53,12 @@ export function ViewToolbar({
       : formatDisplayDate(date);
   const step = view === "week" ? 7 : 1;
   const syncDescription =
-    sync.message ?? (sync.configured ? sync.userEmail ?? "Sign in to sync across devices" : "Add Supabase env vars to enable cloud sync");
+    sync.message ??
+    (sync.configured
+      ? sync.userEmail
+        ? "Changes sync automatically"
+        : "Sign in to sync across devices"
+      : "Add Supabase env vars to enable cloud sync");
 
   return (
     <header className="flex flex-col gap-4 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">

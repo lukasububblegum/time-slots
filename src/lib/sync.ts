@@ -420,7 +420,7 @@ export function useCloudSync(): CloudSyncController {
       return "Sync failed";
     }
     if (userEmail) {
-      return "Signed in";
+      return "Auto sync on";
     }
     return "Cloud ready";
   }, [error, isSyncing, userEmail]);

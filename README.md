@@ -29,7 +29,7 @@ To run a production build locally:
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 6. Restart the dev server.
 
-The app remains local-first. Sign in with email, then use `Sync now` to push local IndexedDB data to Supabase and pull remote changes.
+The app remains local-first. Sign in with email, then local changes auto-sync after a short delay. Use `Sync now` as a manual fallback when you want to force an immediate push/pull.
 
 ## Vercel Deployment
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConflictBanner } from "@/components/ConflictBanner";
 import { PreciseTimeEditor } from "@/components/PreciseTimeEditor";
 import { ScheduleGrid } from "@/components/ScheduleGrid";
@@ -92,6 +92,64 @@ export function AppShell() {
   const preciseBlockTask = preciseBlock
     ? tasks.find((task) => task.id === preciseBlock.taskId)
     : undefined;
+  const syncFingerprint = useMemo(() => {
+    const taskVersions = tasks
+      .map((task) => `${task.id}:${task.updatedAt}:${task.deletedAt ?? ""}`)
+      .sort();
+    const blockVersions = blocks
+      .map((block) => `${block.id}:${block.updatedAt}:${block.deletedAt ?? ""}`)
+      .sort();
+
+    return JSON.stringify({
+      taskVersions,
+      blockVersions,
+      settings: {
+        dayStartMinutes: settings.dayStartMinutes,
+        dayEndMinutes: settings.dayEndMinutes,
+        slotSizeMinutes: settings.slotSizeMinutes,
+        defaultView: settings.defaultView,
+      },
+    });
+  }, [blocks, settings, tasks]);
+  const lastAutoSyncFingerprint = useRef<string | undefined>(undefined);
+  const autoSyncTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const syncEnabled = sync.enabled;
+  const syncIsSyncing = sync.isSyncing;
+  const syncNow = sync.syncNow;
+
+  useEffect(() => {
+    if (!syncEnabled) {
+      lastAutoSyncFingerprint.current = undefined;
+      if (autoSyncTimer.current) {
+        clearTimeout(autoSyncTimer.current);
+      }
+      return;
+    }
+
+    if (!lastAutoSyncFingerprint.current) {
+      lastAutoSyncFingerprint.current = syncFingerprint;
+      return;
+    }
+
+    if (syncIsSyncing || lastAutoSyncFingerprint.current === syncFingerprint) {
+      return;
+    }
+
+    if (autoSyncTimer.current) {
+      clearTimeout(autoSyncTimer.current);
+    }
+
+    autoSyncTimer.current = setTimeout(() => {
+      lastAutoSyncFingerprint.current = syncFingerprint;
+      void syncNow();
+    }, 1800);
+
+    return () => {
+      if (autoSyncTimer.current) {
+        clearTimeout(autoSyncTimer.current);
+      }
+    };
+  }, [syncEnabled, syncFingerprint, syncIsSyncing, syncNow]);
 
   const showConflict = (message: string) => {
     setConflict({
