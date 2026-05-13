@@ -142,23 +142,22 @@ export function SlotInspector({
         <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
           <div className="text-xs font-semibold uppercase text-[var(--muted)]">Repeat weekly</div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <select
+            <input
               className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+              type="number"
+              min={1}
+              max={52}
+              step={1}
               defaultValue={12}
               id="block-repeat-weeks"
-            >
-              <option value={4}>4 weeks</option>
-              <option value={8}>8 weeks</option>
-              <option value={12}>12 weeks</option>
-              <option value={16}>16 weeks</option>
-              <option value={24}>24 weeks</option>
-            </select>
+              aria-label="Weeks to repeat"
+            />
             <button
               className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
               type="button"
               onClick={() => {
                 const repeatWeeks = Number(
-                  (document.getElementById("block-repeat-weeks") as HTMLSelectElement | null)?.value,
+                  (document.getElementById("block-repeat-weeks") as HTMLInputElement | null)?.value,
                 );
                 if (Number.isFinite(repeatWeeks)) {
                   onRepeatWeekly(repeatWeeks);
@@ -170,7 +169,7 @@ export function SlotInspector({
             </button>
           </div>
           <p className="mt-2 text-xs text-[var(--muted)]">
-            Copies this block into future weeks at the same time.
+            Copies this block into future weeks at the same time. Use 1-52 weeks.
           </p>
         </div>
         <button
