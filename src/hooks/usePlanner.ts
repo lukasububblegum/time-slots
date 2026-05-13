@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { DEFAULT_SETTINGS, db, makeScheduleBlock, makeTask, seedDemoData, touch } from "@/lib/db";
-import { findOverlap, isInsideDay } from "@/lib/scheduler";
+import { addDays, findOverlap, isInsideDay } from "@/lib/scheduler";
 import { isCloudSyncConfigured } from "@/lib/sync";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
@@ -251,6 +251,63 @@ export function usePlanner() {
     });
   };
 
+  const repeatBlockWeekly = async (
+    blockId: string,
+    repeatWeeks: number,
+    allBlocks: ScheduleBlock[],
+    appSettings: AppSettings,
+  ) => {
+    const source = await db.scheduleBlocks.get(blockId);
+    if (!source || source.deletedAt) {
+      return { ok: false, message: "Scheduled block no longer exists." };
+    }
+
+    const weeks = Math.max(1, Math.min(52, Math.floor(repeatWeeks)));
+    const existingAndPlanned = allBlocks.slice();
+    const blocksToCreate: ScheduleBlock[] = [];
+    let skipped = 0;
+
+    for (let week = 1; week <= weeks; week += 1) {
+      const candidate = makeScheduleBlock({
+        taskId: source.taskId,
+        date: addDays(source.date, week * 7),
+        startMinutes: source.startMinutes,
+        durationMinutes: source.durationMinutes,
+      });
+
+      if (!isInsideDay(candidate, appSettings)) {
+        skipped += 1;
+        continue;
+      }
+
+      const overlap = findOverlap(candidate, existingAndPlanned, [source.id]);
+      if (overlap) {
+        skipped += 1;
+        continue;
+      }
+
+      blocksToCreate.push(candidate);
+      existingAndPlanned.push(candidate);
+    }
+
+    if (!blocksToCreate.length) {
+      return {
+        ok: false,
+        message: "No repeats were created because every future slot conflicted.",
+      };
+    }
+
+    await db.scheduleBlocks.bulkPut(blocksToCreate);
+    return {
+      ok: true,
+      created: blocksToCreate.length,
+      skipped,
+      message: skipped
+        ? `Created ${blocksToCreate.length} repeats and skipped ${skipped} conflicts.`
+        : `Created ${blocksToCreate.length} weekly repeats.`,
+    };
+  };
+
   return {
     tasks,
     blocks,
@@ -264,5 +321,6 @@ export function usePlanner() {
     setBlockTime,
     swapBlocks,
     unscheduleBlock,
+    repeatBlockWeekly,
   };
 }

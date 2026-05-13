@@ -12,6 +12,7 @@ interface SlotInspectorProps {
   onScheduleTask: (taskId: string, date: string, startMinutes: number) => void;
   onMoveBlock: (date: string, startMinutes: number) => void;
   onResize: (deltaMinutes: number) => void;
+  onRepeatWeekly: (repeatWeeks: number) => void;
   onUnschedule: () => void;
   onFineEdit: () => void;
   onStartSwap: (blockId: string) => void;
@@ -29,6 +30,7 @@ export function SlotInspector({
   onScheduleTask,
   onMoveBlock,
   onResize,
+  onRepeatWeekly,
   onUnschedule,
   onFineEdit,
   onStartSwap,
@@ -136,6 +138,40 @@ export function SlotInspector({
             <Plus className="h-4 w-4" />
             5m
           </button>
+        </div>
+        <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
+          <div className="text-xs font-semibold uppercase text-[var(--muted)]">Repeat weekly</div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <select
+              className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+              defaultValue={12}
+              id="block-repeat-weeks"
+            >
+              <option value={4}>4 weeks</option>
+              <option value={8}>8 weeks</option>
+              <option value={12}>12 weeks</option>
+              <option value={16}>16 weeks</option>
+              <option value={24}>24 weeks</option>
+            </select>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
+              type="button"
+              onClick={() => {
+                const repeatWeeks = Number(
+                  (document.getElementById("block-repeat-weeks") as HTMLSelectElement | null)?.value,
+                );
+                if (Number.isFinite(repeatWeeks)) {
+                  onRepeatWeekly(repeatWeeks);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            Copies this block into future weeks at the same time.
+          </p>
         </div>
         <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"

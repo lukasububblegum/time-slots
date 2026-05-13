@@ -26,6 +26,7 @@ export function AppShell() {
     setBlockTime,
     swapBlocks,
     unscheduleBlock,
+    repeatBlockWeekly,
   } = usePlanner();
   const sync = useCloudSync();
 
@@ -151,11 +152,15 @@ export function AppShell() {
     };
   }, [syncEnabled, syncFingerprint, syncIsSyncing, syncNow]);
 
-  const showConflict = (message: string) => {
+  const showNotice = (title: string, message: string) => {
     setConflict({
-      title: "Schedule conflict",
+      title,
       message,
     });
+  };
+
+  const showConflict = (message: string) => {
+    showNotice("Schedule conflict", message);
   };
 
   const handleDropTask = async (taskId: string, date: string, startMinutes: number) => {
@@ -241,6 +246,20 @@ export function AppShell() {
 
     await unscheduleBlock(selectedBlockId);
     setSelectedBlockId(undefined);
+  };
+
+  const handleRepeatWeekly = async (repeatWeeks: number) => {
+    if (!selectedBlockId) {
+      return;
+    }
+
+    const result = await repeatBlockWeekly(selectedBlockId, repeatWeeks, blocks, settings);
+    if (!result.ok) {
+      showConflict(result.message ?? "Could not create weekly repeats.");
+      return;
+    }
+
+    showNotice("Repeat complete", result.message ?? "Weekly repeats created.");
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -336,6 +355,7 @@ export function AppShell() {
                 }
               }}
               onResize={handleResize}
+              onRepeatWeekly={handleRepeatWeekly}
               onUnschedule={handleUnschedule}
               onFineEdit={() => {
                 if (selectedBlockId) {
