@@ -55,6 +55,7 @@ type ScheduleBlockRow = {
   start_minutes: number;
   duration_minutes: number;
   notes: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -149,6 +150,7 @@ function toBlockRow(block: ScheduleBlock, userId: string): ScheduleBlockRow {
     start_minutes: block.startMinutes,
     duration_minutes: block.durationMinutes,
     notes: block.notes ?? null,
+    completed_at: block.completedAt ?? null,
     created_at: block.createdAt,
     updated_at: block.updatedAt,
     deleted_at: block.deletedAt ?? null,
@@ -164,6 +166,7 @@ function fromBlockRow(row: ScheduleBlockRow): ScheduleBlock {
     startMinutes: row.start_minutes,
     durationMinutes: row.duration_minutes,
     notes: row.notes ?? undefined,
+    completedAt: row.completed_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at ?? undefined,

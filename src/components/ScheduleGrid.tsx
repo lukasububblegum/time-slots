@@ -27,6 +27,7 @@ interface ScheduleGridProps {
   onSwapBlocks: (sourceBlockId: string, targetBlockId: string) => void;
   onSelectBlock: (blockId: string) => void;
   onFineEditBlock: (blockId: string) => void;
+  onToggleBlockComplete: (blockId: string) => void;
   compact?: boolean;
 }
 
@@ -63,6 +64,7 @@ export function ScheduleGrid({
   onSwapBlocks,
   onSelectBlock,
   onFineEditBlock,
+  onToggleBlockComplete,
   compact = false,
 }: ScheduleGridProps) {
   const slots = buildSlots(settings);
@@ -371,6 +373,7 @@ export function ScheduleGrid({
                     onSelect={onSelectBlock}
                     onFineEdit={onFineEditBlock}
                     onSwap={onSwapBlocks}
+                    onToggleComplete={onToggleBlockComplete}
                     onPointerDragStart={setPointerDrag}
                   />
                 ))}

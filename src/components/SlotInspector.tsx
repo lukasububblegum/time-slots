@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowRightLeft, CalendarClock, Minus, MoveRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, Minus, MoveRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { buildSlots, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
@@ -6,14 +6,17 @@ interface SlotInspectorProps {
   selectedTask?: Task;
   selectedBlock?: ScheduleBlock;
   blockTask?: Task;
+  futureRepeatCount: number;
   activeDate: string;
   settings: AppSettings;
   pendingSwapBlockId?: string;
   onScheduleTask: (taskId: string, date: string, startMinutes: number) => void;
   onMoveBlock: (date: string, startMinutes: number) => void;
   onResize: (deltaMinutes: number) => void;
+  onToggleComplete: () => void;
   onRepeatWeekly: (repeatWeeks: number) => void;
   onUnschedule: () => void;
+  onDeleteBlock: (deleteFutureRepeats: boolean) => void;
   onFineEdit: () => void;
   onStartSwap: (blockId: string) => void;
   onCancelSwap: () => void;
@@ -24,14 +27,17 @@ export function SlotInspector({
   selectedTask,
   selectedBlock,
   blockTask,
+  futureRepeatCount,
   activeDate,
   settings,
   pendingSwapBlockId,
   onScheduleTask,
   onMoveBlock,
   onResize,
+  onToggleComplete,
   onRepeatWeekly,
   onUnschedule,
+  onDeleteBlock,
   onFineEdit,
   onStartSwap,
   onCancelSwap,
@@ -61,6 +67,12 @@ export function SlotInspector({
         </div>
         <h3 className="mt-4 text-lg font-semibold">{blockTask?.title ?? "Missing task"}</h3>
         <dl className="mt-4 space-y-3 text-sm">
+          <div>
+            <dt className="text-xs uppercase text-[var(--muted)]">Status</dt>
+            <dd className="mt-1 font-medium">
+              {selectedBlock.completedAt ? "Done" : "Scheduled"}
+            </dd>
+          </div>
           <div>
             <dt className="text-xs uppercase text-[var(--muted)]">Time</dt>
             <dd className="mt-1 font-medium">
@@ -173,6 +185,18 @@ export function SlotInspector({
           </p>
         </div>
         <button
+          className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
+            selectedBlock.completedAt
+              ? "border border-[var(--line)] bg-white text-[var(--accent-strong)] hover:bg-[var(--surface-muted)]"
+              : "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]"
+          }`}
+          type="button"
+          onClick={onToggleComplete}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          {selectedBlock.completedAt ? "Mark not done" : "Mark done"}
+        </button>
+        <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
           type="button"
           onClick={onUnschedule}
@@ -180,6 +204,33 @@ export function SlotInspector({
           <ArrowDownToLine className="h-4 w-4" />
           Unschedule
         </button>
+        <button
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--rose)] px-3 py-2 text-sm font-semibold text-[var(--rose)] hover:bg-[var(--rose-soft)]"
+          type="button"
+          onClick={() => {
+            const deleteFutureRepeats = Boolean(
+              (document.getElementById(`delete-future-repeats-${selectedBlock.id}`) as HTMLInputElement | null)
+                ?.checked,
+            );
+            onDeleteBlock(deleteFutureRepeats);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete block
+        </button>
+        {futureRepeatCount ? (
+          <label className="mt-2 flex items-start gap-2 rounded-md border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--muted)]">
+            <input
+              className="mt-0.5 h-4 w-4 rounded border-[var(--line)] accent-[var(--rose)]"
+              id={`delete-future-repeats-${selectedBlock.id}`}
+              type="checkbox"
+            />
+            <span>
+              Also delete {futureRepeatCount} future weekly repeat
+              {futureRepeatCount === 1 ? "" : "s"} with the same task and time.
+            </span>
+          </label>
+        ) : null}
         <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
           type="button"

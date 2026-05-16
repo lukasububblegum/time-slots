@@ -91,17 +91,18 @@ export function exportScheduleHtml(input: {
               return `<tr>
                 <td>${minutesToLabel(block.startMinutes)}-${minutesToLabel(block.startMinutes + block.durationMinutes)}</td>
                 <td><strong>${escapeHtml(task?.title ?? "Missing task")}</strong><span>${block.durationMinutes} min</span></td>
+                <td>${block.completedAt ? "Done" : "Scheduled"}</td>
                 <td>${escapeHtml(task?.priority ?? "")}</td>
                 <td>${escapeHtml(task?.tags.join(", ") ?? "")}</td>
               </tr>`;
             })
             .join("")
-        : `<tr><td colspan="4" class="empty">No scheduled blocks</td></tr>`;
+        : `<tr><td colspan="5" class="empty">No scheduled blocks</td></tr>`;
 
       return `<section>
         <h2>${escapeHtml(formatDisplayDate(date))}</h2>
         <table>
-          <thead><tr><th>Time</th><th>Task</th><th>Priority</th><th>Tags</th></tr></thead>
+          <thead><tr><th>Time</th><th>Task</th><th>Status</th><th>Priority</th><th>Tags</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </section>`;
@@ -170,6 +171,7 @@ export function createScheduleIcs(input: {
       const task = taskById.get(block.taskId);
       const descriptionParts = [
         task?.description,
+        block.completedAt ? "Status: Done" : undefined,
         task?.priority ? `Priority: ${task.priority}` : undefined,
         task?.tags.length ? `Tags: ${task.tags.join(", ")}` : undefined,
         block.notes ? `Notes: ${block.notes}` : undefined,

@@ -20,12 +20,14 @@ export function AppShell() {
     settings,
     createTask,
     deleteTask,
+    toggleBlockCompleted,
     scheduleTask,
     moveBlock,
     resizeBlock,
     setBlockTime,
     swapBlocks,
     unscheduleBlock,
+    deleteBlock,
     repeatBlockWeekly,
   } = usePlanner();
   const sync = useCloudSync();
@@ -90,6 +92,26 @@ export function AppShell() {
   const selectedBlockTask = selectedBlock
     ? tasks.find((task) => task.id === selectedBlock.taskId)
     : undefined;
+  const selectedBlockFutureRepeatCount = useMemo(() => {
+    if (!selectedBlock) {
+      return 0;
+    }
+
+    const sourceDate = Date.parse(`${selectedBlock.date}T00:00:00.000Z`);
+    return blocks.filter((block) => {
+      if (
+        block.id === selectedBlock.id ||
+        block.taskId !== selectedBlock.taskId ||
+        block.startMinutes !== selectedBlock.startMinutes ||
+        block.durationMinutes !== selectedBlock.durationMinutes
+      ) {
+        return false;
+      }
+
+      const dayDiff = (Date.parse(`${block.date}T00:00:00.000Z`) - sourceDate) / 86_400_000;
+      return dayDiff > 0 && dayDiff % 7 === 0;
+    }).length;
+  }, [blocks, selectedBlock]);
   const preciseBlockTask = preciseBlock
     ? tasks.find((task) => task.id === preciseBlock.taskId)
     : undefined;
@@ -98,7 +120,7 @@ export function AppShell() {
       .map((task) => `${task.id}:${task.updatedAt}:${task.deletedAt ?? ""}`)
       .sort();
     const blockVersions = blocks
-      .map((block) => `${block.id}:${block.updatedAt}:${block.deletedAt ?? ""}`)
+      .map((block) => `${block.id}:${block.updatedAt}:${block.deletedAt ?? ""}:${block.completedAt ?? ""}`)
       .sort();
 
     return JSON.stringify({
@@ -248,6 +270,15 @@ export function AppShell() {
     setSelectedBlockId(undefined);
   };
 
+  const handleDeleteBlock = async (deleteFutureRepeats: boolean) => {
+    if (!selectedBlockId) {
+      return;
+    }
+
+    await deleteBlock(selectedBlockId, blocks, { deleteFutureRepeats });
+    setSelectedBlockId(undefined);
+  };
+
   const handleRepeatWeekly = async (repeatWeeks: number) => {
     if (!selectedBlockId) {
       return;
@@ -324,6 +355,7 @@ export function AppShell() {
           onDropTask={handleDropTask}
           onMoveBlock={handleMoveBlock}
           onSwapBlocks={handleSwapBlocks}
+          onToggleBlockComplete={toggleBlockCompleted}
           onFineEditBlock={(blockId) => {
             setSelectedBlockId(blockId);
             setSelectedTaskId(undefined);
@@ -345,6 +377,7 @@ export function AppShell() {
               selectedTask={selectedTask}
               selectedBlock={selectedBlock}
               blockTask={selectedBlockTask}
+              futureRepeatCount={selectedBlockFutureRepeatCount}
               activeDate={selectedDate}
               settings={settings}
               pendingSwapBlockId={pendingSwapBlockId}
@@ -355,8 +388,14 @@ export function AppShell() {
                 }
               }}
               onResize={handleResize}
+              onToggleComplete={() => {
+                if (selectedBlockId) {
+                  void toggleBlockCompleted(selectedBlockId);
+                }
+              }}
               onRepeatWeekly={handleRepeatWeekly}
               onUnschedule={handleUnschedule}
+              onDeleteBlock={handleDeleteBlock}
               onFineEdit={() => {
                 if (selectedBlockId) {
                   setPreciseBlockId(selectedBlockId);

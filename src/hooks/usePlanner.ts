@@ -8,6 +8,24 @@ import { isCloudSyncConfigured } from "@/lib/sync";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
 const activeOnly = <T extends { deletedAt?: string }>(item: T) => !item.deletedAt;
+const dateToUtcMs = (date: string) => Date.parse(`${date}T00:00:00.000Z`);
+
+const isFutureWeeklyRepeat = (source: ScheduleBlock, candidate: ScheduleBlock) => {
+  if (candidate.id === source.id || candidate.deletedAt) {
+    return false;
+  }
+
+  if (
+    candidate.taskId !== source.taskId ||
+    candidate.startMinutes !== source.startMinutes ||
+    candidate.durationMinutes !== source.durationMinutes
+  ) {
+    return false;
+  }
+
+  const dayDiff = (dateToUtcMs(candidate.date) - dateToUtcMs(source.date)) / 86_400_000;
+  return dayDiff > 0 && dayDiff % 7 === 0;
+};
 
 export function usePlanner() {
   useEffect(() => {
@@ -39,6 +57,20 @@ export function usePlanner() {
     }
 
     await db.tasks.put(touch({ ...task, ...patch }));
+  };
+
+  const toggleBlockCompleted = async (blockId: string) => {
+    const block = await db.scheduleBlocks.get(blockId);
+    if (!block || block.deletedAt) {
+      return;
+    }
+
+    await db.scheduleBlocks.put(
+      touch({
+        ...block,
+        completedAt: block.completedAt ? undefined : new Date().toISOString(),
+      }),
+    );
   };
 
   const deleteTask = async (taskId: string) => {
@@ -251,6 +283,29 @@ export function usePlanner() {
     });
   };
 
+  const deleteBlock = async (
+    blockId: string,
+    allBlocks: ScheduleBlock[],
+    options: { deleteFutureRepeats?: boolean } = {},
+  ) => {
+    const block = await db.scheduleBlocks.get(blockId);
+    if (!block || block.deletedAt) {
+      return;
+    }
+
+    const blocksToDelete = options.deleteFutureRepeats
+      ? [block, ...allBlocks.filter((candidate) => isFutureWeeklyRepeat(block, candidate))]
+      : [block];
+    const timestamp = new Date().toISOString();
+
+    await db.scheduleBlocks.bulkPut(
+      blocksToDelete.map((candidate) => ({
+        ...touch(candidate),
+        deletedAt: timestamp,
+      })),
+    );
+  };
+
   const repeatBlockWeekly = async (
     blockId: string,
     repeatWeeks: number,
@@ -314,6 +369,7 @@ export function usePlanner() {
     settings,
     createTask,
     updateTask,
+    toggleBlockCompleted,
     deleteTask,
     scheduleTask,
     moveBlock,
@@ -321,6 +377,7 @@ export function usePlanner() {
     setBlockTime,
     swapBlocks,
     unscheduleBlock,
+    deleteBlock,
     repeatBlockWeekly,
   };
 }

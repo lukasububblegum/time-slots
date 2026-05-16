@@ -23,6 +23,7 @@ create table if not exists public.schedule_blocks (
   start_minutes integer not null check (start_minutes >= 0 and start_minutes < 1440),
   duration_minutes integer not null check (duration_minutes > 0),
   notes text,
+  completed_at timestamptz,
   created_at timestamptz not null,
   updated_at timestamptz not null,
   deleted_at timestamptz,

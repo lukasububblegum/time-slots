@@ -24,6 +24,7 @@ export interface ScheduleBlock {
   startMinutes: number;
   durationMinutes: number;
   notes?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

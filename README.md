@@ -20,6 +20,7 @@ To run a production build locally:
 
 1. Create a Supabase project.
 2. Open the SQL editor and run `supabase/schema.sql`.
+   - If you already created the tables before the completion checkbox feature, also run `supabase/20260516_add_schedule_block_completed_at.sql` once.
 3. In Authentication settings, enable Email provider and magic links.
 4. Add redirect URLs:
    - `http://127.0.0.1:3000`
