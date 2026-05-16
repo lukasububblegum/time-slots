@@ -70,7 +70,8 @@ export function ScheduleGrid({
   const slots = buildSlots(settings);
   const dates = view === "week" ? getWeekDates(date) : [date];
   const taskById = new Map(tasks.map((task) => [task.id, task]));
-  const rows = `repeat(${slots.length}, minmax(${compact ? 12 : 11}px, 1fr))`;
+  const slotHeightPx = compact ? 6 : 7;
+  const rows = `repeat(${slots.length}, ${slotHeightPx}px)`;
   const minWidthClass =
     view === "week" ? "min-w-[980px]" : "min-w-[420px] sm:min-w-[560px]";
   const [activeDrag, setActiveDrag] = useState<DragPayload | null>(null);
@@ -222,9 +223,9 @@ export function ScheduleGrid({
 
   return (
     <section className="min-w-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <CalendarDays className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+          <CalendarDays className="h-4 w-4 shrink-0 text-[var(--accent)]" />
           <div>
             <h2 className="text-sm font-semibold">Schedule</h2>
             <p className="text-xs text-[var(--muted)]">Drop on empty slots to move. Drop a block on another block to swap.</p>
@@ -241,7 +242,7 @@ export function ScheduleGrid({
           {dates.map((day) => (
             <div
               key={day}
-              className={`border-b border-r border-[var(--line)] px-3 py-2 text-sm font-semibold ${
+              className={`border-b border-r border-[var(--line)] px-3 py-1.5 text-sm font-semibold ${
                 day === date ? "bg-[var(--accent-soft)] text-[var(--accent-strong)]" : "bg-white"
               }`}
             >
@@ -253,7 +254,7 @@ export function ScheduleGrid({
             {slots.map((slot) => (
               <div
                 key={slot}
-                className={`px-2 pt-1 text-[11px] text-[var(--muted)] ${
+                className={`px-2 pt-0.5 text-[10px] text-[var(--muted)] ${
                   slot % 60 === 0
                     ? "border-b border-[var(--line-strong)]"
                     : slot % 15 === 0

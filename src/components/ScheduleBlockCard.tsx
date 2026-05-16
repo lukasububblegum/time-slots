@@ -1,5 +1,6 @@
-import { ArrowRightLeft, Check, CheckCircle2, Circle, GripVertical } from "lucide-react";
-import type { PointerEvent } from "react";
+import { ArrowRightLeft, Check, CheckCircle2, Circle, GripVertical, MessageSquare, Tags } from "lucide-react";
+import type { CSSProperties, PointerEvent } from "react";
+import { useRef, useState } from "react";
 import { getAbsolutePlacement, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
@@ -38,6 +39,14 @@ export function ScheduleBlockCard({
 }: ScheduleBlockCardProps) {
   const placement = getAbsolutePlacement(block, settings);
   const isCompleted = Boolean(block.completedAt);
+  const tags = task?.tags ?? [];
+  const extraTagCount = Math.max(0, tags.length - 1);
+  const detailText = block.notes ?? task?.description;
+  const hasMetadata = tags.length > 0 || Boolean(detailText);
+  const metadataLabel = tags[0] ? `${tags[0]}${extraTagCount ? ` +${extraTagCount}` : ""}` : "Comment";
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsStyle, setDetailsStyle] = useState<CSSProperties>();
+  const cardRef = useRef<HTMLElement | null>(null);
   const cardTone = isSelected
     ? isCompleted
       ? "border-[#5f877d] bg-[#5f877d] text-white shadow-[0_16px_36px_rgba(54,92,84,0.22)]"
@@ -59,6 +68,7 @@ export function ScheduleBlockCard({
   return (
     <article
       data-block-id={block.id}
+      ref={cardRef}
       onPointerDown={(event) => {
         if (event.pointerType === "mouse" && event.button !== 0) {
           return;
@@ -91,7 +101,7 @@ export function ScheduleBlockCard({
       }}
       onClick={() => onSelect(block.id)}
       onDoubleClick={() => onFineEdit(block.id)}
-      className={`absolute inset-x-2 z-10 flex select-none flex-col justify-between overflow-hidden rounded-lg border px-3 py-2 shadow-sm transition ${cardTone} ${
+      className={`absolute inset-x-2 z-10 flex select-none flex-col justify-between overflow-hidden rounded-lg border px-2.5 py-1.5 shadow-sm transition ${cardTone} ${
         isDragging ? "cursor-grabbing opacity-60" : "cursor-grab"
       }`}
       style={{ ...placement, touchAction: "none" }}
@@ -104,7 +114,7 @@ export function ScheduleBlockCard({
           }`}
         />
       ) : null}
-      <div className="flex min-w-0 items-start gap-2">
+      <div className="flex min-w-0 items-start gap-1.5">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 opacity-70" />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -122,6 +132,39 @@ export function ScheduleBlockCard({
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Done
               </span>
+            ) : null}
+            {hasMetadata ? (
+              <button
+                className={`inline-flex max-w-[8.5rem] shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
+                  isSelected
+                    ? "border-white/35 bg-white/18 text-white"
+                    : isCompleted
+                      ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
+                      : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
+                }`}
+                type="button"
+                aria-expanded={detailsOpen}
+                aria-label={`Show details for ${task?.title ?? "block"}`}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const rect = cardRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    const width = Math.min(Math.max(rect.width, 240), 340);
+                    setDetailsStyle({
+                      left: Math.min(rect.left, window.innerWidth - width - 12),
+                      top: Math.min(rect.bottom + 6, window.innerHeight - 220),
+                      width,
+                    });
+                  }
+                  setDetailsOpen((open) => !open);
+                }}
+              >
+                {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
+                <span className="truncate">{metadataLabel}</span>
+              </button>
             ) : null}
           </div>
           <div
@@ -158,7 +201,7 @@ export function ScheduleBlockCard({
           {isCompleted ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
         </button>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
         <span
           className={
             isSelected
@@ -175,6 +218,40 @@ export function ScheduleBlockCard({
           swap
         </span>
       </div>
+      {detailsOpen && hasMetadata ? (
+        <div
+          className="fixed z-50 rounded-lg border border-[var(--line-strong)] bg-white p-3 text-[var(--text)] shadow-[0_18px_40px_rgba(36,49,59,0.18)]"
+          style={detailsStyle}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {tags.length ? (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Tags</div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-[#9fcfc3] bg-[#f4fbf7] px-2 py-1 text-xs font-semibold text-[var(--accent-strong)]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {detailText ? (
+            <div className={tags.length ? "mt-3" : ""}>
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Comment</div>
+              <p className="mt-1 text-sm leading-snug text-[var(--text)]">{detailText}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }

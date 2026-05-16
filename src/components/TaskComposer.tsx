@@ -18,6 +18,7 @@ interface TaskComposerProps {
 
 export function TaskComposer({ onCreate }: TaskComposerProps) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [estimatedMinutes, setEstimatedMinutes] = useState(45);
   const [tags, setTags] = useState("");
@@ -30,6 +31,7 @@ export function TaskComposer({ onCreate }: TaskComposerProps) {
 
     await onCreate({
       title,
+      description,
       priority,
       estimatedMinutes,
       tags: tags
@@ -39,6 +41,7 @@ export function TaskComposer({ onCreate }: TaskComposerProps) {
     });
 
     setTitle("");
+    setDescription("");
     setPriority("medium");
     setEstimatedMinutes(45);
     setTags("");
@@ -55,6 +58,12 @@ export function TaskComposer({ onCreate }: TaskComposerProps) {
         placeholder="Task title"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
+      />
+      <textarea
+        className="mt-2 max-h-24 min-h-16 w-full resize-y rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--text)]"
+        placeholder="Comment"
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
       />
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
         <select
