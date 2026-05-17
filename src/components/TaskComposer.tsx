@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { durationOptionsMinutes } from "@/lib/durations";
 import type { Priority } from "@/lib/types";
 
 export interface TaskComposerInput {
@@ -82,12 +83,11 @@ export function TaskComposer({ onCreate }: TaskComposerProps) {
           onChange={(event) => setEstimatedMinutes(Number(event.target.value))}
           aria-label="Estimated duration"
         >
-          <option value={15}>15 min</option>
-          <option value={30}>30 min</option>
-          <option value={45}>45 min</option>
-          <option value={60}>60 min</option>
-          <option value={90}>90 min</option>
-          <option value={120}>120 min</option>
+          {durationOptionsMinutes.map((minutes) => (
+            <option key={minutes} value={minutes}>
+              {minutes < 60 || minutes % 60 ? `${minutes} min` : `${minutes / 60} hr`}
+            </option>
+          ))}
         </select>
       </div>
       <input

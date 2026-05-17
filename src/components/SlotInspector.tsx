@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, MessageSquare, Minus, MoveRight, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { durationOptionsMinutes } from "@/lib/durations";
 import { buildSlots, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, Priority, ScheduleBlock, Task } from "@/lib/types";
 
@@ -10,8 +11,6 @@ const parseTags = (value: string) =>
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
-
-const defaultDurationOptions = [15, 30, 45, 60, 90, 120];
 
 interface TaskInfoEditorProps {
   task: Task;
@@ -113,9 +112,9 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
               onChange={(event) => setEstimatedMinutes(Number(event.target.value))}
               aria-label="Estimated duration"
             >
-              {defaultDurationOptions.map((minutes) => (
+              {durationOptionsMinutes.map((minutes) => (
                 <option key={minutes} value={minutes}>
-                  {minutes} min
+                  {minutes < 60 || minutes % 60 ? `${minutes} min` : `${minutes / 60} hr`}
                 </option>
               ))}
             </select>
