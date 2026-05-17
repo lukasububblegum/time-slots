@@ -9,7 +9,7 @@ import { TaskInbox } from "@/components/TaskInbox";
 import { ViewToolbar } from "@/components/ViewToolbar";
 import { usePlanner } from "@/hooks/usePlanner";
 import { exportScheduleHtml, exportScheduleIcs } from "@/lib/exportSchedule";
-import { dateKey } from "@/lib/scheduler";
+import { dateKey, getWeeklyRepeatGroup } from "@/lib/scheduler";
 import { useCloudSync } from "@/lib/sync";
 import type { CalendarView, Conflict } from "@/lib/types";
 
@@ -97,20 +97,7 @@ export function AppShell() {
       return 0;
     }
 
-    const sourceDate = Date.parse(`${selectedBlock.date}T00:00:00.000Z`);
-    return blocks.filter((block) => {
-      if (
-        block.id === selectedBlock.id ||
-        block.taskId !== selectedBlock.taskId ||
-        block.startMinutes !== selectedBlock.startMinutes ||
-        block.durationMinutes !== selectedBlock.durationMinutes
-      ) {
-        return false;
-      }
-
-      const dayDiff = (Date.parse(`${block.date}T00:00:00.000Z`) - sourceDate) / 86_400_000;
-      return dayDiff > 0 && dayDiff % 7 === 0;
-    }).length;
+    return getWeeklyRepeatGroup(selectedBlock, blocks, { futureOnly: true }).length;
   }, [blocks, selectedBlock]);
   const preciseBlockTask = preciseBlock
     ? tasks.find((task) => task.id === preciseBlock.taskId)
@@ -199,8 +186,26 @@ export function AppShell() {
     setConflict(null);
   };
 
+  const shouldMoveRepeatSeries = (blockId: string) => {
+    const block = blocks.find((item) => item.id === blockId);
+    if (!block) {
+      return false;
+    }
+
+    const repeatCount = getWeeklyRepeatGroup(block, blocks).length;
+    if (!repeatCount) {
+      return false;
+    }
+
+    return window.confirm(
+      `Move ${repeatCount} matching weekly repeat${repeatCount === 1 ? "" : "s"} too?\n\nOK: move the whole repeat series.\nCancel: move only this block.`,
+    );
+  };
+
   const handleMoveBlock = async (blockId: string, date: string, startMinutes: number) => {
-    const result = await moveBlock(blockId, date, startMinutes, blocks, settings);
+    const result = await moveBlock(blockId, date, startMinutes, blocks, settings, {
+      moveRepeatSeries: shouldMoveRepeatSeries(blockId),
+    });
     if (!result.ok) {
       showConflict(result.message ?? "Could not move that block.");
       return;

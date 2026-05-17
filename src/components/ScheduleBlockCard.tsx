@@ -1,6 +1,6 @@
 import { ArrowRightLeft, Check, CheckCircle2, Circle, GripVertical, MessageSquare, Tags } from "lucide-react";
 import type { CSSProperties, PointerEvent } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAbsolutePlacement, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
@@ -46,7 +46,13 @@ export function ScheduleBlockCard({
   const metadataLabel = tags[0] ? `${tags[0]}${extraTagCount ? ` +${extraTagCount}` : ""}` : "Comment";
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsStyle, setDetailsStyle] = useState<CSSProperties>();
+  const [cardHeight, setCardHeight] = useState(0);
   const cardRef = useRef<HTMLElement | null>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
+  const tagRows = Math.max(0, Math.ceil(tags.length / 3));
+  const inlineMetadataMinHeight = 46 + tagRows * 23 + (detailText ? 20 : 0);
+  const showInlineMetadata = hasMetadata && cardHeight >= inlineMetadataMinHeight;
+  const showMetadataButton = hasMetadata && !showInlineMetadata;
   const cardTone = isSelected
     ? isCompleted
       ? "border-[#5f877d] bg-[#5f877d] text-white shadow-[0_16px_36px_rgba(54,92,84,0.22)]"
@@ -64,6 +70,58 @@ export function ScheduleBlockCard({
 
     return Math.round(rawOffsetMinutes / settings.slotSizeMinutes) * settings.slotSizeMinutes;
   };
+
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateHeight = () => {
+      setCardHeight(element.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!detailsOpen) {
+      return;
+    }
+
+    const closeOnOutsidePointerDown = (event: globalThis.PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (cardRef.current?.contains(target) || detailsRef.current?.contains(target)) {
+        return;
+      }
+
+      setDetailsOpen(false);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDetailsOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", closeOnOutsidePointerDown, true);
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.removeEventListener("pointerdown", closeOnOutsidePointerDown, true);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [detailsOpen]);
 
   return (
     <article
@@ -133,7 +191,7 @@ export function ScheduleBlockCard({
                 Done
               </span>
             ) : null}
-            {hasMetadata ? (
+            {showMetadataButton ? (
               <button
                 className={`inline-flex max-w-[8.5rem] shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
                   isSelected
@@ -178,6 +236,42 @@ export function ScheduleBlockCard({
           >
             {minutesToLabel(block.startMinutes)} - {minutesToLabel(block.startMinutes + block.durationMinutes)}
           </div>
+          {showInlineMetadata ? (
+            <div className="mt-1 flex min-w-0 flex-col gap-1">
+              {tags.length ? (
+                <div className="flex min-w-0 flex-wrap items-center gap-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`max-w-[8rem] truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
+                        isSelected
+                          ? "border-white/35 bg-white/18 text-white"
+                          : isCompleted
+                            ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
+                            : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {detailText ? (
+                <div
+                  className={`flex min-w-0 items-center gap-1 text-xs ${
+                    isSelected
+                      ? "text-white/78"
+                      : isCompleted
+                        ? "text-[#6b817a]"
+                        : "text-[var(--muted)]"
+                  }`}
+                >
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{detailText}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <button
           className={`-mr-1 rounded-full border p-1 transition ${
@@ -220,6 +314,7 @@ export function ScheduleBlockCard({
       </div>
       {detailsOpen && hasMetadata ? (
         <div
+          ref={detailsRef}
           className="fixed z-50 rounded-lg border border-[var(--line-strong)] bg-white p-3 text-[var(--text)] shadow-[0_18px_40px_rgba(36,49,59,0.18)]"
           style={detailsStyle}
           onPointerDown={(event) => {

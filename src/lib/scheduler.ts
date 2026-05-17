@@ -18,6 +18,9 @@ export const addDays = (date: string, amount: number) => {
   return dateKey(next);
 };
 
+export const daysBetween = (from: string, to: string) =>
+  (Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`)) / 86_400_000;
+
 export const formatDisplayDate = (date: string) =>
   new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -78,6 +81,33 @@ export const findOverlap = (
       !ignoreIds.includes(block.id) &&
       blocksOverlap(candidate, block),
   );
+
+export const isWeeklyRepeatMatch = (
+  source: ScheduleBlock,
+  candidate: ScheduleBlock,
+  options: { futureOnly?: boolean } = {},
+) => {
+  if (candidate.id === source.id || candidate.deletedAt) {
+    return false;
+  }
+
+  if (
+    candidate.taskId !== source.taskId ||
+    candidate.startMinutes !== source.startMinutes ||
+    candidate.durationMinutes !== source.durationMinutes
+  ) {
+    return false;
+  }
+
+  const dayDiff = daysBetween(source.date, candidate.date);
+  return options.futureOnly ? dayDiff > 0 && dayDiff % 7 === 0 : dayDiff !== 0 && dayDiff % 7 === 0;
+};
+
+export const getWeeklyRepeatGroup = (
+  source: ScheduleBlock,
+  blocks: ScheduleBlock[],
+  options: { futureOnly?: boolean } = {},
+) => blocks.filter((candidate) => isWeeklyRepeatMatch(source, candidate, options));
 
 export const isInsideDay = (
   block: Pick<ScheduleBlock, "startMinutes" | "durationMinutes">,

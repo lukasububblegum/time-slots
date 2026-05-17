@@ -3,29 +3,11 @@
 import { useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { DEFAULT_SETTINGS, db, makeScheduleBlock, makeTask, seedDemoData, touch } from "@/lib/db";
-import { addDays, findOverlap, isInsideDay } from "@/lib/scheduler";
+import { addDays, daysBetween, findOverlap, getWeeklyRepeatGroup, isInsideDay } from "@/lib/scheduler";
 import { isCloudSyncConfigured } from "@/lib/sync";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
 const activeOnly = <T extends { deletedAt?: string }>(item: T) => !item.deletedAt;
-const dateToUtcMs = (date: string) => Date.parse(`${date}T00:00:00.000Z`);
-
-const isFutureWeeklyRepeat = (source: ScheduleBlock, candidate: ScheduleBlock) => {
-  if (candidate.id === source.id || candidate.deletedAt) {
-    return false;
-  }
-
-  if (
-    candidate.taskId !== source.taskId ||
-    candidate.startMinutes !== source.startMinutes ||
-    candidate.durationMinutes !== source.durationMinutes
-  ) {
-    return false;
-  }
-
-  const dayDiff = (dateToUtcMs(candidate.date) - dateToUtcMs(source.date)) / 86_400_000;
-  return dayDiff > 0 && dayDiff % 7 === 0;
-};
 
 export function usePlanner() {
   useEffect(() => {
@@ -135,29 +117,43 @@ export function usePlanner() {
     startMinutes: number,
     allBlocks: ScheduleBlock[],
     appSettings: AppSettings,
+    options: { moveRepeatSeries?: boolean } = {},
   ) => {
     const block = await db.scheduleBlocks.get(blockId);
     if (!block || block.deletedAt) {
       return { ok: false, message: "Scheduled block no longer exists." };
     }
 
-    const candidate = touch({
-      ...block,
-      date,
-      startMinutes,
-    });
+    const relatedBlocks = options.moveRepeatSeries ? getWeeklyRepeatGroup(block, allBlocks) : [];
+    const blocksToMove = [block, ...relatedBlocks];
+    const movingIds = blocksToMove.map((item) => item.id);
+    const dayDelta = daysBetween(block.date, date);
+    const startDelta = startMinutes - block.startMinutes;
+    const candidates = blocksToMove.map((item) =>
+      touch({
+        ...item,
+        date: addDays(item.date, dayDelta),
+        startMinutes: item.startMinutes + startDelta,
+      }),
+    );
+    const candidate = candidates.find((item) => item.id === blockId) ?? candidates[0];
 
-    if (!isInsideDay(candidate, appSettings)) {
+    if (candidates.some((item) => !isInsideDay(item, appSettings))) {
       return { ok: false, message: "That move would fall outside your visible day." };
     }
 
-    const overlap = findOverlap(candidate, allBlocks, [blockId]);
+    const overlap = candidates.find((item) => findOverlap(item, allBlocks, movingIds));
     if (overlap) {
-      return { ok: false, message: "That time overlaps another block. Drop onto a block to swap." };
+      return {
+        ok: false,
+        message: options.moveRepeatSeries
+          ? "That repeat-series move would overlap another block."
+          : "That time overlaps another block. Drop onto a block to swap.",
+      };
     }
 
-    await db.scheduleBlocks.put(candidate);
-    return { ok: true, block: candidate };
+    await db.scheduleBlocks.bulkPut(candidates);
+    return { ok: true, block: candidate, movedCount: candidates.length };
   };
 
   const resizeBlock = async (
@@ -294,7 +290,7 @@ export function usePlanner() {
     }
 
     const blocksToDelete = options.deleteFutureRepeats
-      ? [block, ...allBlocks.filter((candidate) => isFutureWeeklyRepeat(block, candidate))]
+      ? [block, ...getWeeklyRepeatGroup(block, allBlocks, { futureOnly: true })]
       : [block];
     const timestamp = new Date().toISOString();
 
