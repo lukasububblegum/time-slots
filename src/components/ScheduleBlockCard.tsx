@@ -60,8 +60,9 @@ export function ScheduleBlockCard({
   const tags = task?.tags ?? [];
   const extraTagCount = Math.max(0, tags.length - 1);
   const detailText = block.notes ?? task?.description;
+  const hasComment = Boolean(detailText);
   const hasMetadata = tags.length > 0 || Boolean(detailText);
-  const metadataLabel = tags[0] ? `${tags[0]}${extraTagCount ? ` +${extraTagCount}` : ""}` : "Comment";
+  const tagLabel = tags[0] ? `${tags[0]}${extraTagCount ? ` +${extraTagCount}` : ""}` : "";
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsStyle, setDetailsStyle] = useState<CSSProperties>();
   const [cardHeight, setCardHeight] = useState(0);
@@ -74,7 +75,8 @@ export function ScheduleBlockCard({
   const isTinyBlock = cardHeight > 0 && cardHeight < 72;
   const inlineMetadataMinHeight = 124 + tagRows * 23 + (detailText ? 22 : 0);
   const showInlineMetadata = hasMetadata && cardHeight >= inlineMetadataMinHeight;
-  const showMetadataButton = hasMetadata && (!showInlineMetadata || metadataOverflow);
+  const showTagButton = tags.length > 0 && (!showInlineMetadata || metadataOverflow);
+  const showCommentButton = hasComment && !showInlineMetadata;
   const showFooter = !isCompactBlock;
   const cardTone = isSelected
     ? isCompleted
@@ -313,7 +315,7 @@ export function ScheduleBlockCard({
           >
             {minutesToLabel(block.startMinutes)} - {minutesToLabel(block.startMinutes + block.durationMinutes)}
           </div>
-          {(!isTinyBlock && task?.priority) || showMetadataButton ? (
+          {(!isTinyBlock && task?.priority) || showTagButton || showCommentButton ? (
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
               {task?.priority && !isTinyBlock ? (
                 <span
@@ -322,7 +324,7 @@ export function ScheduleBlockCard({
                   {priorityLabel[task.priority]}
                 </span>
               ) : null}
-              {showMetadataButton ? (
+              {showTagButton ? (
                 <button
                   className={`inline-flex shrink items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
                     isSelected
@@ -333,7 +335,7 @@ export function ScheduleBlockCard({
                   } ${isCompactBlock ? "max-w-[2rem]" : "max-w-[7.5rem]"}`}
                   type="button"
                   aria-expanded={detailsOpen}
-                  aria-label={`Show details for ${task?.title ?? "block"}`}
+                  aria-label={`Show tags for ${task?.title ?? "block"}`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
                   }}
@@ -342,8 +344,31 @@ export function ScheduleBlockCard({
                     toggleDetails();
                   }}
                 >
-                  {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
-                  <span className={isCompactBlock ? "sr-only" : "truncate"}>{metadataLabel}</span>
+                  <Tags className="h-3.5 w-3.5 shrink-0" />
+                  <span className={isCompactBlock ? "sr-only" : "truncate"}>{tagLabel}</span>
+                </button>
+              ) : null}
+              {showCommentButton ? (
+                <button
+                  className={`inline-flex shrink-0 items-center justify-center rounded-full border p-1 shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
+                    isSelected
+                      ? "border-white/35 bg-white/18 text-white"
+                      : isCompleted
+                        ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
+                        : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
+                  }`}
+                  type="button"
+                  aria-expanded={detailsOpen}
+                  aria-label={`Show comment for ${task?.title ?? "block"}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleDetails();
+                  }}
+                >
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                 </button>
               ) : null}
             </div>
