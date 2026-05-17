@@ -11,7 +11,9 @@ import { usePlanner } from "@/hooks/usePlanner";
 import { exportScheduleHtml, exportScheduleIcs } from "@/lib/exportSchedule";
 import { dateKey, getWeeklyRepeatGroup } from "@/lib/scheduler";
 import { useCloudSync } from "@/lib/sync";
-import type { CalendarView, Conflict } from "@/lib/types";
+import type { CalendarView, Conflict, Task } from "@/lib/types";
+
+type TaskInfoPatch = Partial<Pick<Task, "title" | "description" | "priority" | "tags" | "estimatedMinutes">>;
 
 export function AppShell() {
   const {
@@ -19,6 +21,8 @@ export function AppShell() {
     blocks,
     settings,
     createTask,
+    updateTask,
+    updateBlockInfo,
     deleteTask,
     toggleBlockCompleted,
     scheduleTask,
@@ -98,6 +102,13 @@ export function AppShell() {
     }
 
     return getWeeklyRepeatGroup(selectedBlock, blocks, { futureOnly: true }).length;
+  }, [blocks, selectedBlock]);
+  const selectedBlockRepeatGroupCount = useMemo(() => {
+    if (!selectedBlock) {
+      return 0;
+    }
+
+    return getWeeklyRepeatGroup(selectedBlock, blocks).length;
   }, [blocks, selectedBlock]);
   const preciseBlockTask = preciseBlock
     ? tasks.find((task) => task.id === preciseBlock.taskId)
@@ -298,6 +309,23 @@ export function AppShell() {
     showNotice("Repeat complete", result.message ?? "Weekly repeats created.");
   };
 
+  const handleUpdateTask = async (taskId: string, patch: TaskInfoPatch) => {
+    await updateTask(taskId, patch);
+    setConflict(null);
+  };
+
+  const handleUpdateBlockInfo = async (
+    blockId: string,
+    taskPatch: TaskInfoPatch,
+    blockNotes: string | undefined,
+    applyToRepeats: boolean,
+  ) => {
+    await updateBlockInfo(blockId, taskPatch, blockNotes, blocks, { applyToRepeats });
+    setSelectedBlockId(blockId);
+    setSelectedTaskId(undefined);
+    setConflict(null);
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     await deleteTask(taskId);
     if (selectedTaskId === taskId) {
@@ -383,10 +411,13 @@ export function AppShell() {
               selectedBlock={selectedBlock}
               blockTask={selectedBlockTask}
               futureRepeatCount={selectedBlockFutureRepeatCount}
+              repeatGroupCount={selectedBlockRepeatGroupCount}
               activeDate={selectedDate}
               settings={settings}
               pendingSwapBlockId={pendingSwapBlockId}
               onScheduleTask={handleDropTask}
+              onUpdateTask={handleUpdateTask}
+              onUpdateBlockInfo={handleUpdateBlockInfo}
               onMoveBlock={(date, startMinutes) => {
                 if (selectedBlockId) {
                   void handleMoveBlock(selectedBlockId, date, startMinutes);

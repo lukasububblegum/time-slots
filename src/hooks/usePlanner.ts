@@ -8,6 +8,26 @@ import { isCloudSyncConfigured } from "@/lib/sync";
 import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
 
 const activeOnly = <T extends { deletedAt?: string }>(item: T) => !item.deletedAt;
+type TaskInfoPatch = Partial<Pick<Task, "title" | "description" | "priority" | "tags" | "estimatedMinutes">>;
+
+const normalizeTaskInfoPatch = (patch: TaskInfoPatch): TaskInfoPatch => {
+  const cleaned: TaskInfoPatch = { ...patch };
+
+  if (hasPatchValue(patch, "title")) {
+    cleaned.title = patch.title?.trim();
+  }
+  if (hasPatchValue(patch, "description")) {
+    cleaned.description = patch.description?.trim() || undefined;
+  }
+  if (hasPatchValue(patch, "tags")) {
+    cleaned.tags = patch.tags?.map((tag) => tag.trim()).filter(Boolean) ?? [];
+  }
+
+  return cleaned;
+};
+
+const hasPatchValue = <K extends keyof TaskInfoPatch>(patch: TaskInfoPatch, key: K) =>
+  Object.prototype.hasOwnProperty.call(patch, key);
 
 export function usePlanner() {
   useEffect(() => {
@@ -39,6 +59,63 @@ export function usePlanner() {
     }
 
     await db.tasks.put(touch({ ...task, ...patch }));
+  };
+
+  const updateBlockInfo = async (
+    blockId: string,
+    taskPatch: TaskInfoPatch,
+    blockNotes: string | undefined,
+    allBlocks: ScheduleBlock[],
+    options: { applyToRepeats?: boolean } = {},
+  ) => {
+    const block = await db.scheduleBlocks.get(blockId);
+    if (!block || block.deletedAt) {
+      return;
+    }
+
+    const task = await db.tasks.get(block.taskId);
+    if (!task || task.deletedAt) {
+      return;
+    }
+
+    const repeatBlocks = options.applyToRepeats ? getWeeklyRepeatGroup(block, allBlocks) : [];
+    const targetBlocks = [block, ...repeatBlocks];
+    const targetBlockIds = new Set(targetBlocks.map((item) => item.id));
+    const activeTaskBlocks = allBlocks.filter((item) => item.taskId === task.id && !item.deletedAt);
+    const remainingTaskBlocks = activeTaskBlocks.filter((item) => !targetBlockIds.has(item.id));
+    const cleanedPatch = normalizeTaskInfoPatch(taskPatch);
+    const nextNotes = blockNotes?.trim() || undefined;
+
+    const nextTask =
+      remainingTaskBlocks.length === 0
+        ? touch({ ...task, ...cleanedPatch })
+        : makeTask({
+            title: hasPatchValue(cleanedPatch, "title") ? cleanedPatch.title ?? task.title : task.title,
+            description: hasPatchValue(cleanedPatch, "description") ? cleanedPatch.description : task.description,
+            priority: hasPatchValue(cleanedPatch, "priority") ? cleanedPatch.priority ?? task.priority : task.priority,
+            estimatedMinutes: hasPatchValue(cleanedPatch, "estimatedMinutes")
+              ? cleanedPatch.estimatedMinutes ?? task.estimatedMinutes
+              : task.estimatedMinutes,
+            dueDate: task.dueDate,
+            tags: hasPatchValue(cleanedPatch, "tags") ? cleanedPatch.tags ?? [] : task.tags,
+          });
+
+    if (remainingTaskBlocks.length > 0) {
+      nextTask.status = task.status;
+    }
+
+    const nextBlocks = targetBlocks.map((item) =>
+      touch({
+        ...item,
+        taskId: nextTask.id,
+        notes: nextNotes,
+      }),
+    );
+
+    await db.transaction("rw", db.tasks, db.scheduleBlocks, async () => {
+      await db.tasks.put(nextTask);
+      await db.scheduleBlocks.bulkPut(nextBlocks);
+    });
   };
 
   const toggleBlockCompleted = async (blockId: string) => {
@@ -365,6 +442,7 @@ export function usePlanner() {
     settings,
     createTask,
     updateTask,
+    updateBlockInfo,
     toggleBlockCompleted,
     deleteTask,
     scheduleTask,

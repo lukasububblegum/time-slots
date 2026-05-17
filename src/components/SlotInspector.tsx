@@ -1,16 +1,173 @@
-import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, Minus, MoveRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { type FormEvent, useEffect, useState } from "react";
+import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, Minus, MoveRight, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { buildSlots, minutesToLabel } from "@/lib/scheduler";
-import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
+import type { AppSettings, Priority, ScheduleBlock, Task } from "@/lib/types";
+
+type TaskInfoPatch = Partial<Pick<Task, "title" | "description" | "priority" | "tags" | "estimatedMinutes">>;
+
+const parseTags = (value: string) =>
+  value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+interface TaskInfoEditorProps {
+  task: Task;
+  block?: ScheduleBlock;
+  repeatGroupCount?: number;
+  onSave: (patch: TaskInfoPatch, blockNotes?: string, applyToRepeats?: boolean) => void;
+}
+
+function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoEditorProps) {
+  const tagText = task.tags.join(", ");
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? "");
+  const [priority, setPriority] = useState<Priority>(task.priority);
+  const [estimatedMinutes, setEstimatedMinutes] = useState(String(task.estimatedMinutes));
+  const [tags, setTags] = useState(tagText);
+  const [blockNotes, setBlockNotes] = useState(block?.notes ?? "");
+  const [applyToRepeats, setApplyToRepeats] = useState(Boolean(block && repeatGroupCount));
+
+  useEffect(() => {
+    setTitle(task.title);
+    setDescription(task.description ?? "");
+    setPriority(task.priority);
+    setEstimatedMinutes(String(task.estimatedMinutes));
+    setTags(tagText);
+    setBlockNotes(block?.notes ?? "");
+    setApplyToRepeats(Boolean(block && repeatGroupCount));
+  }, [block?.id, block?.notes, repeatGroupCount, tagText, task.description, task.estimatedMinutes, task.id, task.priority, task.title]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const minutes = Number(estimatedMinutes);
+
+    if (!title.trim() || !Number.isFinite(minutes) || minutes < 1) {
+      return;
+    }
+
+    onSave(
+      {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        priority,
+        estimatedMinutes: Math.round(minutes),
+        tags: parseTags(tags),
+      },
+      block ? blockNotes : undefined,
+      block ? applyToRepeats : false,
+    );
+  };
+
+  return (
+    <form className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3" onSubmit={handleSubmit}>
+      <div className="text-xs font-semibold uppercase text-[var(--muted)]">Edit info</div>
+      <div className="mt-3 space-y-3">
+        <label className="block text-xs font-medium text-[var(--muted)]">
+          Title
+          <input
+            className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+        <label className="block text-xs font-medium text-[var(--muted)]">
+          Task comment
+          <textarea
+            className="mt-1 min-h-20 w-full resize-y rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Default comment shown on this task"
+          />
+        </label>
+        {block ? (
+          <label className="block text-xs font-medium text-[var(--muted)]">
+            Block note
+            <textarea
+              className="mt-1 min-h-16 w-full resize-y rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+              value={blockNotes}
+              onChange={(event) => setBlockNotes(event.target.value)}
+              placeholder="Optional note just for this scheduled block"
+            />
+          </label>
+        ) : null}
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block text-xs font-medium text-[var(--muted)]">
+            Priority
+            <select
+              className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as Priority)}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-[var(--muted)]">
+            Estimate
+            <input
+              className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+              min={1}
+              step={5}
+              type="number"
+              value={estimatedMinutes}
+              onChange={(event) => setEstimatedMinutes(event.target.value)}
+            />
+          </label>
+        </div>
+        <label className="block text-xs font-medium text-[var(--muted)]">
+          Tags
+          <input
+            className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
+            value={tags}
+            onChange={(event) => setTags(event.target.value)}
+            placeholder="class, focus, admin"
+          />
+        </label>
+        {block && repeatGroupCount ? (
+          <label className="flex items-start gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--muted)]">
+            <input
+              className="mt-0.5 h-4 w-4 rounded border-[var(--line)] accent-[var(--accent)]"
+              checked={applyToRepeats}
+              type="checkbox"
+              onChange={(event) => setApplyToRepeats(event.target.checked)}
+            />
+            <span>
+              Apply these edits to {repeatGroupCount} matching weekly repeat
+              {repeatGroupCount === 1 ? "" : "s"}. Uncheck to edit only this block.
+            </span>
+          </label>
+        ) : null}
+      </div>
+      <button
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
+        type="submit"
+      >
+        <Save className="h-4 w-4" />
+        Save info
+      </button>
+    </form>
+  );
+}
 
 interface SlotInspectorProps {
   selectedTask?: Task;
   selectedBlock?: ScheduleBlock;
   blockTask?: Task;
   futureRepeatCount: number;
+  repeatGroupCount: number;
   activeDate: string;
   settings: AppSettings;
   pendingSwapBlockId?: string;
   onScheduleTask: (taskId: string, date: string, startMinutes: number) => void;
+  onUpdateTask: (taskId: string, patch: TaskInfoPatch) => void;
+  onUpdateBlockInfo: (
+    blockId: string,
+    taskPatch: TaskInfoPatch,
+    blockNotes: string | undefined,
+    applyToRepeats: boolean,
+  ) => void;
   onMoveBlock: (date: string, startMinutes: number) => void;
   onResize: (deltaMinutes: number) => void;
   onToggleComplete: () => void;
@@ -28,10 +185,13 @@ export function SlotInspector({
   selectedBlock,
   blockTask,
   futureRepeatCount,
+  repeatGroupCount,
   activeDate,
   settings,
   pendingSwapBlockId,
   onScheduleTask,
+  onUpdateTask,
+  onUpdateBlockInfo,
   onMoveBlock,
   onResize,
   onToggleComplete,
@@ -97,6 +257,16 @@ export function SlotInspector({
             </div>
           ) : null}
         </dl>
+        {blockTask ? (
+          <TaskInfoEditor
+            block={selectedBlock}
+            repeatGroupCount={repeatGroupCount}
+            task={blockTask}
+            onSave={(patch, blockNotes, applyToRepeats) => {
+              onUpdateBlockInfo(selectedBlock.id, patch, blockNotes, Boolean(applyToRepeats));
+            }}
+          />
+        ) : null}
         <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
           <div className="text-xs font-semibold uppercase text-[var(--muted)]">Move</div>
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -283,6 +453,12 @@ export function SlotInspector({
           <dd className="mt-1 font-medium capitalize">{selectedTask.priority}</dd>
         </div>
       </dl>
+      <TaskInfoEditor
+        task={selectedTask}
+        onSave={(patch) => {
+          onUpdateTask(selectedTask.id, patch);
+        }}
+      />
       <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
         <div className="text-xs font-semibold uppercase text-[var(--muted)]">Schedule</div>
         <div className="mt-2 grid grid-cols-2 gap-2">
