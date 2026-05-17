@@ -37,6 +37,12 @@ const priorityTone: Record<Priority, string> = {
   low: "border-[#b6cff4] bg-[#e6efff] text-[#3568ae]",
 };
 
+const priorityRailTone: Record<Priority, string> = {
+  high: "bg-[#cf5d74]",
+  medium: "bg-[#d1862d]",
+  low: "bg-[#4e7fc6]",
+};
+
 export function ScheduleBlockCard({
   block,
   task,
@@ -64,9 +70,12 @@ export function ScheduleBlockCard({
   const detailsRef = useRef<HTMLDivElement | null>(null);
   const metadataRef = useRef<HTMLDivElement | null>(null);
   const tagRows = Math.max(0, Math.ceil(tags.length / 3));
-  const inlineMetadataMinHeight = 46 + tagRows * 23 + (detailText ? 20 : 0);
+  const isCompactBlock = cardHeight > 0 && cardHeight < 112;
+  const isTinyBlock = cardHeight > 0 && cardHeight < 72;
+  const inlineMetadataMinHeight = 124 + tagRows * 23 + (detailText ? 22 : 0);
   const showInlineMetadata = hasMetadata && cardHeight >= inlineMetadataMinHeight;
   const showMetadataButton = hasMetadata && (!showInlineMetadata || metadataOverflow);
+  const showFooter = !isCompactBlock;
   const cardTone = isSelected
     ? isCompleted
       ? "border-[#5f877d] bg-[#5f877d] text-white shadow-[0_16px_36px_rgba(54,92,84,0.22)]"
@@ -260,6 +269,14 @@ export function ScheduleBlockCard({
           }`}
         />
       ) : null}
+      {task?.priority ? (
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-x-0 top-0 h-1 ${priorityRailTone[task.priority]} ${
+            isSelected ? "opacity-90" : "opacity-80"
+          }`}
+        />
+      ) : null}
       <div className="flex min-w-0 items-start gap-1.5">
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 opacity-70" />
         <div className="min-w-0 flex-1">
@@ -296,9 +313,9 @@ export function ScheduleBlockCard({
           >
             {minutesToLabel(block.startMinutes)} - {minutesToLabel(block.startMinutes + block.durationMinutes)}
           </div>
-          {task?.priority || showMetadataButton ? (
+          {(!isTinyBlock && task?.priority) || showMetadataButton ? (
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
-              {task?.priority ? (
+              {task?.priority && !isTinyBlock ? (
                 <span
                   className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(36,49,59,0.10)] ${priorityTone[task.priority]}`}
                 >
@@ -307,13 +324,13 @@ export function ScheduleBlockCard({
               ) : null}
               {showMetadataButton ? (
                 <button
-                  className={`inline-flex max-w-[7.5rem] shrink items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
+                  className={`inline-flex shrink items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
                     isSelected
                       ? "border-white/35 bg-white/18 text-white"
                       : isCompleted
                         ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
                         : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
-                  }`}
+                  } ${isCompactBlock ? "max-w-[2rem]" : "max-w-[7.5rem]"}`}
                   type="button"
                   aria-expanded={detailsOpen}
                   aria-label={`Show details for ${task?.title ?? "block"}`}
@@ -326,7 +343,7 @@ export function ScheduleBlockCard({
                   }}
                 >
                   {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="truncate">{metadataLabel}</span>
+                  <span className={isCompactBlock ? "sr-only" : "truncate"}>{metadataLabel}</span>
                 </button>
               ) : null}
             </div>
@@ -399,6 +416,7 @@ export function ScheduleBlockCard({
           {isCompleted ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
         </button>
       </div>
+      {showFooter ? (
       <div className="mt-1 flex items-center justify-between gap-2 text-xs">
         <span
           className={
@@ -416,6 +434,7 @@ export function ScheduleBlockCard({
           swap
         </span>
       </div>
+      ) : null}
       {detailsOpen && hasMetadata ? (
         <div
           ref={detailsRef}
@@ -428,8 +447,18 @@ export function ScheduleBlockCard({
             event.stopPropagation();
           }}
         >
-          {tags.length ? (
+          {task?.priority ? (
             <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Priority</div>
+              <span
+                className={`mt-1.5 inline-flex rounded-full border px-2 py-1 text-xs font-black uppercase tracking-[0.08em] ${priorityTone[task.priority]}`}
+              >
+                {priorityLabel[task.priority]}
+              </span>
+            </div>
+          ) : null}
+          {tags.length ? (
+            <div className={task?.priority ? "mt-3" : ""}>
               <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Tags</div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
@@ -444,7 +473,7 @@ export function ScheduleBlockCard({
             </div>
           ) : null}
           {detailText ? (
-            <div className={tags.length ? "mt-3" : ""}>
+            <div className={tags.length || task?.priority ? "mt-3" : ""}>
               <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Comment</div>
               <p className="mt-1 text-sm leading-snug text-[var(--text)]">{detailText}</p>
             </div>
