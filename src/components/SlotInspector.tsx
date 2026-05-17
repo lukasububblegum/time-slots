@@ -11,6 +11,8 @@ const parseTags = (value: string) =>
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+const defaultDurationOptions = [15, 30, 45, 60, 90, 120];
+
 interface TaskInfoEditorProps {
   task: Task;
   block?: ScheduleBlock;
@@ -23,16 +25,19 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
   const [priority, setPriority] = useState<Priority>(task.priority);
-  const [estimatedMinutes, setEstimatedMinutes] = useState(String(task.estimatedMinutes));
+  const [estimatedMinutes, setEstimatedMinutes] = useState(task.estimatedMinutes);
   const [tags, setTags] = useState(tagText);
   const [blockNotes, setBlockNotes] = useState(block?.notes ?? "");
   const [applyToRepeats, setApplyToRepeats] = useState(Boolean(block && repeatGroupCount));
+  const durationOptions = defaultDurationOptions.includes(task.estimatedMinutes)
+    ? defaultDurationOptions
+    : [...defaultDurationOptions, task.estimatedMinutes].sort((a, b) => a - b);
 
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description ?? "");
     setPriority(task.priority);
-    setEstimatedMinutes(String(task.estimatedMinutes));
+    setEstimatedMinutes(task.estimatedMinutes);
     setTags(tagText);
     setBlockNotes(block?.notes ?? "");
     setApplyToRepeats(Boolean(block && repeatGroupCount));
@@ -40,9 +45,8 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const minutes = Number(estimatedMinutes);
 
-    if (!title.trim() || !Number.isFinite(minutes) || minutes < 1) {
+    if (!title.trim() || !Number.isFinite(estimatedMinutes) || estimatedMinutes < 1) {
       return;
     }
 
@@ -51,7 +55,7 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        estimatedMinutes: Math.round(minutes),
+        estimatedMinutes,
         tags: parseTags(tags),
       },
       block ? blockNotes : undefined,
@@ -106,14 +110,18 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
           </label>
           <label className="block text-xs font-medium text-[var(--muted)]">
             Estimate
-            <input
+            <select
               className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm text-[var(--ink)]"
-              min={1}
-              step={5}
-              type="number"
               value={estimatedMinutes}
-              onChange={(event) => setEstimatedMinutes(event.target.value)}
-            />
+              onChange={(event) => setEstimatedMinutes(Number(event.target.value))}
+              aria-label="Estimated duration"
+            >
+              {durationOptions.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes} min
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <label className="block text-xs font-medium text-[var(--muted)]">

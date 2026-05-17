@@ -47,12 +47,14 @@ export function ScheduleBlockCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsStyle, setDetailsStyle] = useState<CSSProperties>();
   const [cardHeight, setCardHeight] = useState(0);
+  const [metadataOverflow, setMetadataOverflow] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
+  const metadataRef = useRef<HTMLDivElement | null>(null);
   const tagRows = Math.max(0, Math.ceil(tags.length / 3));
   const inlineMetadataMinHeight = 46 + tagRows * 23 + (detailText ? 20 : 0);
   const showInlineMetadata = hasMetadata && cardHeight >= inlineMetadataMinHeight;
-  const showMetadataButton = hasMetadata && !showInlineMetadata;
+  const showMetadataButton = hasMetadata && (!showInlineMetadata || metadataOverflow);
   const cardTone = isSelected
     ? isCompleted
       ? "border-[#5f877d] bg-[#5f877d] text-white shadow-[0_16px_36px_rgba(54,92,84,0.22)]"
@@ -69,6 +71,23 @@ export function ScheduleBlockCard({
     );
 
     return Math.round(rawOffsetMinutes / settings.slotSizeMinutes) * settings.slotSizeMinutes;
+  };
+  const positionDetails = () => {
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+
+    const width = Math.min(Math.max(rect.width, 240), 340);
+    setDetailsStyle({
+      left: Math.min(rect.left, window.innerWidth - width - 12),
+      top: Math.min(rect.bottom + 6, window.innerHeight - 220),
+      width,
+    });
+  };
+  const toggleDetails = () => {
+    positionDetails();
+    setDetailsOpen((open) => !open);
   };
 
   useEffect(() => {
@@ -122,6 +141,34 @@ export function ScheduleBlockCard({
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [detailsOpen]);
+
+  useEffect(() => {
+    const element = metadataRef.current;
+    if (!showInlineMetadata || !element) {
+      setMetadataOverflow(false);
+      return;
+    }
+
+    const updateOverflow = () => {
+      const overflowNodes = Array.from(
+        element.querySelectorAll<HTMLElement>("[data-overflow-check='true']"),
+      );
+      setMetadataOverflow(
+        overflowNodes.some((node) => node.scrollWidth > node.clientWidth + 1),
+      );
+    };
+
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(element);
+    Array.from(element.children).forEach((child) => {
+      observer.observe(child);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [detailText, showInlineMetadata, tags]);
 
   return (
     <article
@@ -208,16 +255,7 @@ export function ScheduleBlockCard({
                 }}
                 onClick={(event) => {
                   event.stopPropagation();
-                  const rect = cardRef.current?.getBoundingClientRect();
-                  if (rect) {
-                    const width = Math.min(Math.max(rect.width, 240), 340);
-                    setDetailsStyle({
-                      left: Math.min(rect.left, window.innerWidth - width - 12),
-                      top: Math.min(rect.bottom + 6, window.innerHeight - 220),
-                      width,
-                    });
-                  }
-                  setDetailsOpen((open) => !open);
+                  toggleDetails();
                 }}
               >
                 {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
@@ -237,12 +275,13 @@ export function ScheduleBlockCard({
             {minutesToLabel(block.startMinutes)} - {minutesToLabel(block.startMinutes + block.durationMinutes)}
           </div>
           {showInlineMetadata ? (
-            <div className="mt-1 flex min-w-0 flex-col gap-1">
+            <div ref={metadataRef} className="mt-1 flex min-w-0 flex-col gap-1">
               {tags.length ? (
                 <div className="flex min-w-0 flex-wrap items-center gap-1">
                   {tags.map((tag) => (
                     <span
                       key={tag}
+                      data-overflow-check="true"
                       className={`max-w-[8rem] truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
                         isSelected
                           ? "border-white/35 bg-white/18 text-white"
@@ -257,7 +296,7 @@ export function ScheduleBlockCard({
                 </div>
               ) : null}
               {detailText ? (
-                <div
+                <button
                   className={`flex min-w-0 items-center gap-1 text-xs ${
                     isSelected
                       ? "text-white/78"
@@ -265,10 +304,18 @@ export function ScheduleBlockCard({
                         ? "text-[#6b817a]"
                         : "text-[var(--muted)]"
                   }`}
+                  type="button"
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleDetails();
+                  }}
                 >
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{detailText}</span>
-                </div>
+                  <span data-overflow-check="true" className="truncate text-left">{detailText}</span>
+                </button>
               ) : null}
             </div>
           ) : null}
