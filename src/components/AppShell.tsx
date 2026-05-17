@@ -42,7 +42,7 @@ export function AppShell() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | undefined>();
   const [pendingSwapBlockId, setPendingSwapBlockId] = useState<string | undefined>();
   const [conflict, setConflict] = useState<Conflict | null>(null);
-  const [scheduleOnly, setScheduleOnly] = useState(false);
+  const [scheduleOnly, setScheduleOnly] = useState(true);
   const [preciseBlockId, setPreciseBlockId] = useState<string | undefined>();
 
   useEffect(() => {
@@ -357,7 +357,9 @@ export function AppShell() {
       />
       <div
         className={`grid min-h-0 flex-1 grid-cols-1 gap-4 ${
-          scheduleOnly ? "" : "md:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_300px]"
+          scheduleOnly
+            ? "xl:grid-cols-[minmax(0,1fr)_300px]"
+            : "md:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_300px]"
         }`}
       >
         {!scheduleOnly ? (
@@ -404,12 +406,12 @@ export function AppShell() {
           }}
           compact={scheduleOnly}
         />
-        {!scheduleOnly ? (
-          <div className="min-w-0 md:col-span-2 2xl:col-span-1">
+        <div className={`min-w-0 ${scheduleOnly ? "" : "md:col-span-2 2xl:col-span-1"}`}>
             <SlotInspector
               selectedTask={selectedTask}
               selectedBlock={selectedBlock}
               blockTask={selectedBlockTask}
+              readOnly={scheduleOnly}
               futureRepeatCount={selectedBlockLinkedRepeatCount}
               repeatGroupCount={selectedBlockRepeatGroupCount}
               activeDate={selectedDate}
@@ -441,8 +443,7 @@ export function AppShell() {
               onCancelSwap={() => setPendingSwapBlockId(undefined)}
               onDeleteTask={handleDeleteTask}
             />
-          </div>
-        ) : null}
+        </div>
       </div>
       {preciseBlock ? (
         <PreciseTimeEditor

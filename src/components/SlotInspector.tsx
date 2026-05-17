@@ -160,6 +160,7 @@ interface SlotInspectorProps {
   selectedTask?: Task;
   selectedBlock?: ScheduleBlock;
   blockTask?: Task;
+  readOnly?: boolean;
   futureRepeatCount: number;
   repeatGroupCount: number;
   activeDate: string;
@@ -189,6 +190,7 @@ export function SlotInspector({
   selectedTask,
   selectedBlock,
   blockTask,
+  readOnly = false,
   futureRepeatCount,
   repeatGroupCount,
   activeDate,
@@ -302,176 +304,178 @@ export function SlotInspector({
             </div>
           ) : null}
         </dl>
-        {blockTask ? (
-          <TaskInfoEditor
-            block={selectedBlock}
-            repeatGroupCount={repeatGroupCount}
-            task={blockTask}
-            onSave={(patch, blockNotes, applyToRepeats) => {
-              onUpdateBlockInfo(selectedBlock.id, patch, blockNotes, Boolean(applyToRepeats));
-            }}
-          />
-        ) : null}
-        <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
-          <div className="text-xs font-semibold uppercase text-[var(--muted)]">Move</div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <input
-              className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
-              type="date"
-              defaultValue={selectedBlock.date}
-              id="block-move-date"
+        {!readOnly && blockTask ? (
+          <>
+            <TaskInfoEditor
+              block={selectedBlock}
+              repeatGroupCount={repeatGroupCount}
+              task={blockTask}
+              onSave={(patch, blockNotes, applyToRepeats) => {
+                onUpdateBlockInfo(selectedBlock.id, patch, blockNotes, Boolean(applyToRepeats));
+              }}
             />
-            <select
-              className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
-              defaultValue={defaultStart}
-              id="block-move-time"
-            >
-              {slots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {minutesToLabel(slot)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
-            type="button"
-            onClick={() => {
-              const date = (document.getElementById("block-move-date") as HTMLInputElement | null)?.value;
-              const start = Number((document.getElementById("block-move-time") as HTMLSelectElement | null)?.value);
-              if (date && Number.isFinite(start)) {
-                onMoveBlock(date, start);
-              }
-            }}
-          >
-            <MoveRight className="h-4 w-4" />
-            Move block
-          </button>
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
-            type="button"
-            onClick={() => onResize(-5)}
-          >
-            <Minus className="h-4 w-4" />
-            5m
-          </button>
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
-            type="button"
-            onClick={() => onResize(5)}
-          >
-            <Plus className="h-4 w-4" />
-            5m
-          </button>
-        </div>
-        <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
-          <div className="text-xs font-semibold uppercase text-[var(--muted)]">Repeat weekly</div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <input
-              className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
-              type="number"
-              min={1}
-              max={52}
-              step={1}
-              defaultValue={12}
-              id="block-repeat-weeks"
-              aria-label="Weeks to repeat"
-            />
+            <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
+              <div className="text-xs font-semibold uppercase text-[var(--muted)]">Move</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <input
+                  className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+                  type="date"
+                  defaultValue={selectedBlock.date}
+                  id="block-move-date"
+                />
+                <select
+                  className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+                  defaultValue={defaultStart}
+                  id="block-move-time"
+                >
+                  {slots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {minutesToLabel(slot)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
+                type="button"
+                onClick={() => {
+                  const date = (document.getElementById("block-move-date") as HTMLInputElement | null)?.value;
+                  const start = Number((document.getElementById("block-move-time") as HTMLSelectElement | null)?.value);
+                  if (date && Number.isFinite(start)) {
+                    onMoveBlock(date, start);
+                  }
+                }}
+              >
+                <MoveRight className="h-4 w-4" />
+                Move block
+              </button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
+                type="button"
+                onClick={() => onResize(-5)}
+              >
+                <Minus className="h-4 w-4" />
+                5m
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
+                type="button"
+                onClick={() => onResize(5)}
+              >
+                <Plus className="h-4 w-4" />
+                5m
+              </button>
+            </div>
+            <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
+              <div className="text-xs font-semibold uppercase text-[var(--muted)]">Repeat weekly</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <input
+                  className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+                  type="number"
+                  min={1}
+                  max={52}
+                  step={1}
+                  defaultValue={12}
+                  id="block-repeat-weeks"
+                  aria-label="Weeks to repeat"
+                />
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
+                  type="button"
+                  onClick={() => {
+                    const repeatWeeks = Number(
+                      (document.getElementById("block-repeat-weeks") as HTMLInputElement | null)?.value,
+                    );
+                    if (Number.isFinite(repeatWeeks)) {
+                      onRepeatWeekly(repeatWeeks);
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Copies this block into future weeks at the same time. Use 1-52 weeks.
+              </p>
+            </div>
             <button
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold hover:bg-[var(--surface)]"
+              className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
+                selectedBlock.completedAt
+                  ? "border border-[var(--line)] bg-white text-[var(--accent-strong)] hover:bg-[var(--surface-muted)]"
+                  : "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]"
+              }`}
+              type="button"
+              onClick={onToggleComplete}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {selectedBlock.completedAt ? "Mark not done" : "Mark done"}
+            </button>
+            <button
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
+              type="button"
+              onClick={onUnschedule}
+            >
+              <ArrowDownToLine className="h-4 w-4" />
+              Unschedule
+            </button>
+            <button
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--rose)] px-3 py-2 text-sm font-semibold text-[var(--rose)] hover:bg-[var(--rose-soft)]"
               type="button"
               onClick={() => {
-                const repeatWeeks = Number(
-                  (document.getElementById("block-repeat-weeks") as HTMLInputElement | null)?.value,
+                const deleteFutureRepeats = Boolean(
+                  (document.getElementById(`delete-future-repeats-${selectedBlock.id}`) as HTMLInputElement | null)
+                    ?.checked,
                 );
-                if (Number.isFinite(repeatWeeks)) {
-                  onRepeatWeekly(repeatWeeks);
+                onDeleteBlock(deleteFutureRepeats);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete block
+            </button>
+            {futureRepeatCount ? (
+              <label className="mt-2 flex items-start gap-2 rounded-md border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--muted)]">
+                <input
+                  className="mt-0.5 h-4 w-4 rounded border-[var(--line)] accent-[var(--rose)]"
+                  id={`delete-future-repeats-${selectedBlock.id}`}
+                  type="checkbox"
+                />
+                <span>
+                  Also delete {futureRepeatCount} linked weekly repeat
+                  {futureRepeatCount === 1 ? "" : "s"} in this repeat chain.
+                </span>
+              </label>
+            ) : null}
+            <button
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
+              type="button"
+              onClick={onFineEdit}
+            >
+              <Pencil className="h-4 w-4" />
+              Fine edit
+            </button>
+            <button
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
+              type="button"
+              onClick={() => {
+                if (isSwapPending) {
+                  onCancelSwap();
+                } else {
+                  onStartSwap(selectedBlock.id);
                 }
               }}
             >
-              <Plus className="h-4 w-4" />
-              Add
+              <ArrowRightLeft className="h-4 w-4" />
+              {isSwapPending ? "Cancel swap" : "Pick swap target"}
             </button>
-          </div>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Copies this block into future weeks at the same time. Use 1-52 weeks.
-          </p>
-        </div>
-        <button
-          className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
-            selectedBlock.completedAt
-              ? "border border-[var(--line)] bg-white text-[var(--accent-strong)] hover:bg-[var(--surface-muted)]"
-              : "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]"
-          }`}
-          type="button"
-          onClick={onToggleComplete}
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          {selectedBlock.completedAt ? "Mark not done" : "Mark done"}
-        </button>
-        <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
-          type="button"
-          onClick={onUnschedule}
-        >
-          <ArrowDownToLine className="h-4 w-4" />
-          Unschedule
-        </button>
-        <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--rose)] px-3 py-2 text-sm font-semibold text-[var(--rose)] hover:bg-[var(--rose-soft)]"
-          type="button"
-          onClick={() => {
-            const deleteFutureRepeats = Boolean(
-              (document.getElementById(`delete-future-repeats-${selectedBlock.id}`) as HTMLInputElement | null)
-                ?.checked,
-            );
-            onDeleteBlock(deleteFutureRepeats);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete block
-        </button>
-        {futureRepeatCount ? (
-          <label className="mt-2 flex items-start gap-2 rounded-md border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--muted)]">
-            <input
-              className="mt-0.5 h-4 w-4 rounded border-[var(--line)] accent-[var(--rose)]"
-              id={`delete-future-repeats-${selectedBlock.id}`}
-              type="checkbox"
-            />
-            <span>
-              Also delete {futureRepeatCount} linked weekly repeat
-              {futureRepeatCount === 1 ? "" : "s"} in this repeat chain.
-            </span>
-          </label>
-        ) : null}
-        <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
-          type="button"
-          onClick={onFineEdit}
-        >
-          <Pencil className="h-4 w-4" />
-          Fine edit
-        </button>
-        <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--line)] px-3 py-2 text-sm font-semibold hover:bg-[var(--surface-muted)]"
-          type="button"
-          onClick={() => {
-            if (isSwapPending) {
-              onCancelSwap();
-            } else {
-              onStartSwap(selectedBlock.id);
-            }
-          }}
-        >
-          <ArrowRightLeft className="h-4 w-4" />
-          {isSwapPending ? "Cancel swap" : "Pick swap target"}
-        </button>
-        {isSwapPending ? (
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Tap another scheduled block to complete the swap.
-          </p>
+            {isSwapPending ? (
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Tap another scheduled block to complete the swap.
+              </p>
+            ) : null}
+          </>
         ) : null}
       </aside>
     );
@@ -498,56 +502,60 @@ export function SlotInspector({
           <dd className="mt-1 font-medium capitalize">{selectedTask.priority}</dd>
         </div>
       </dl>
-      <TaskInfoEditor
-        task={selectedTask}
-        onSave={(patch) => {
-          onUpdateTask(selectedTask.id, patch);
-        }}
-      />
-      <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
-        <div className="text-xs font-semibold uppercase text-[var(--muted)]">Schedule</div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <input
-            className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
-            type="date"
-            defaultValue={activeDate}
-            id="task-schedule-date"
+      {!readOnly ? (
+        <>
+          <TaskInfoEditor
+            task={selectedTask}
+            onSave={(patch) => {
+              onUpdateTask(selectedTask.id, patch);
+            }}
           />
-          <select
-            className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
-            defaultValue={settings.dayStartMinutes}
-            id="task-schedule-time"
+          <div className="mt-5 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-3">
+            <div className="text-xs font-semibold uppercase text-[var(--muted)]">Schedule</div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input
+                className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+                type="date"
+                defaultValue={activeDate}
+                id="task-schedule-date"
+              />
+              <select
+                className="rounded-md border border-[var(--line)] bg-white px-2 py-2 text-sm"
+                defaultValue={settings.dayStartMinutes}
+                id="task-schedule-time"
+              >
+                {slots.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {minutesToLabel(slot)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
+              type="button"
+              onClick={() => {
+                const date = (document.getElementById("task-schedule-date") as HTMLInputElement | null)?.value;
+                const start = Number((document.getElementById("task-schedule-time") as HTMLSelectElement | null)?.value);
+                if (date && Number.isFinite(start)) {
+                  onScheduleTask(selectedTask.id, date, start);
+                }
+              }}
+            >
+              <CalendarClock className="h-4 w-4" />
+              Schedule task
+            </button>
+          </div>
+          <button
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--rose)] px-3 py-2 text-sm font-semibold text-[var(--rose)] hover:bg-[var(--rose-soft)]"
+            type="button"
+            onClick={() => onDeleteTask(selectedTask.id)}
           >
-            {slots.map((slot) => (
-              <option key={slot} value={slot}>
-                {minutesToLabel(slot)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]"
-          type="button"
-          onClick={() => {
-            const date = (document.getElementById("task-schedule-date") as HTMLInputElement | null)?.value;
-            const start = Number((document.getElementById("task-schedule-time") as HTMLSelectElement | null)?.value);
-            if (date && Number.isFinite(start)) {
-              onScheduleTask(selectedTask.id, date, start);
-            }
-          }}
-        >
-          <CalendarClock className="h-4 w-4" />
-          Schedule task
-        </button>
-      </div>
-      <button
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--rose)] px-3 py-2 text-sm font-semibold text-[var(--rose)] hover:bg-[var(--rose-soft)]"
-        type="button"
-        onClick={() => onDeleteTask(selectedTask.id)}
-      >
-        <Trash2 className="h-4 w-4" />
-        Delete task
-      </button>
+            <Trash2 className="h-4 w-4" />
+            Delete task
+          </button>
+        </>
+      ) : null}
     </aside>
   );
 }
