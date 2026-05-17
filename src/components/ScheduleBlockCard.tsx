@@ -1,5 +1,5 @@
 import { ArrowRightLeft, Check, CheckCircle2, Circle, GripVertical, MessageSquare, Tags } from "lucide-react";
-import type { CSSProperties, PointerEvent } from "react";
+import type { PointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { getAbsolutePlacement, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, Priority, ScheduleBlock, Task } from "@/lib/types";
@@ -63,12 +63,9 @@ export function ScheduleBlockCard({
   const hasComment = Boolean(detailText);
   const hasMetadata = tags.length > 0 || Boolean(detailText);
   const tagLabel = tags[0] ? `${tags[0]}${extraTagCount ? ` +${extraTagCount}` : ""}` : "";
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsStyle, setDetailsStyle] = useState<CSSProperties>();
   const [cardHeight, setCardHeight] = useState(0);
   const [metadataOverflow, setMetadataOverflow] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
-  const detailsRef = useRef<HTMLDivElement | null>(null);
   const metadataRef = useRef<HTMLDivElement | null>(null);
   const tagRows = Math.max(0, Math.ceil(tags.length / 3));
   const isCompactBlock = cardHeight > 0 && cardHeight < 112;
@@ -95,53 +92,6 @@ export function ScheduleBlockCard({
 
     return Math.round(rawOffsetMinutes / settings.slotSizeMinutes) * settings.slotSizeMinutes;
   };
-  const positionDetails = () => {
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (!rect) {
-      return;
-    }
-
-    const width = Math.min(Math.max(rect.width, 240), 340);
-    const gap = 10;
-    const margin = 12;
-    const estimatedHeight = Math.min(
-      260,
-      70 + tags.length * 22 + (detailText ? Math.ceil(detailText.length / 34) * 22 : 0),
-    );
-    const clampTop = (top: number) =>
-      Math.max(margin, Math.min(top, window.innerHeight - estimatedHeight - margin));
-
-    if (rect.right + gap + width <= window.innerWidth - margin) {
-      setDetailsStyle({
-        left: rect.right + gap,
-        top: clampTop(rect.top),
-        width,
-      });
-      return;
-    }
-
-    if (rect.left - gap - width >= margin) {
-      setDetailsStyle({
-        left: rect.left - gap - width,
-        top: clampTop(rect.top),
-        width,
-      });
-      return;
-    }
-
-    const hasMoreRoomAbove = rect.top > window.innerHeight - rect.bottom;
-    const verticalTop = hasMoreRoomAbove ? rect.top - estimatedHeight - gap : rect.bottom + gap;
-    setDetailsStyle({
-      left: Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin)),
-      top: clampTop(verticalTop),
-      width,
-    });
-  };
-  const toggleDetails = () => {
-    positionDetails();
-    setDetailsOpen((open) => !open);
-  };
-
   useEffect(() => {
     const element = cardRef.current;
     if (!element) {
@@ -160,39 +110,6 @@ export function ScheduleBlockCard({
       observer.disconnect();
     };
   }, []);
-
-  useEffect(() => {
-    if (!detailsOpen) {
-      return;
-    }
-
-    const closeOnOutsidePointerDown = (event: globalThis.PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (cardRef.current?.contains(target) || detailsRef.current?.contains(target)) {
-        return;
-      }
-
-      setDetailsOpen(false);
-    };
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setDetailsOpen(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", closeOnOutsidePointerDown, true);
-    window.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      window.removeEventListener("pointerdown", closeOnOutsidePointerDown, true);
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [detailsOpen]);
 
   useEffect(() => {
     const element = metadataRef.current;
@@ -334,14 +251,13 @@ export function ScheduleBlockCard({
                         : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
                   } ${isCompactBlock ? "max-w-[2rem]" : "max-w-[7.5rem]"}`}
                   type="button"
-                  aria-expanded={detailsOpen}
-                  aria-label={`Show tags for ${task?.title ?? "block"}`}
+                  aria-label={`Select ${task?.title ?? "block"} to view tags`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    toggleDetails();
+                    onSelect(block.id);
                   }}
                 >
                   <Tags className="h-3.5 w-3.5 shrink-0" />
@@ -358,14 +274,13 @@ export function ScheduleBlockCard({
                         : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
                   }`}
                   type="button"
-                  aria-expanded={detailsOpen}
-                  aria-label={`Show comment for ${task?.title ?? "block"}`}
+                  aria-label={`Select ${task?.title ?? "block"} to view comment`}
                   onPointerDown={(event) => {
                     event.stopPropagation();
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    toggleDetails();
+                    onSelect(block.id);
                   }}
                 >
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
@@ -409,7 +324,7 @@ export function ScheduleBlockCard({
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    toggleDetails();
+                    onSelect(block.id);
                   }}
                 >
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
@@ -459,51 +374,6 @@ export function ScheduleBlockCard({
           swap
         </span>
       </div>
-      ) : null}
-      {detailsOpen && hasMetadata ? (
-        <div
-          ref={detailsRef}
-          className="fixed z-50 max-h-[260px] overflow-y-auto rounded-lg border border-[var(--line-strong)] bg-white p-3 text-[var(--text)] shadow-[0_18px_40px_rgba(36,49,59,0.18)]"
-          style={detailsStyle}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          {task?.priority ? (
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Priority</div>
-              <span
-                className={`mt-1.5 inline-flex rounded-full border px-2 py-1 text-xs font-black uppercase tracking-[0.08em] ${priorityTone[task.priority]}`}
-              >
-                {priorityLabel[task.priority]}
-              </span>
-            </div>
-          ) : null}
-          {tags.length ? (
-            <div className={task?.priority ? "mt-3" : ""}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Tags</div>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-[#9fcfc3] bg-[#f4fbf7] px-2 py-1 text-xs font-semibold text-[var(--accent-strong)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {detailText ? (
-            <div className={tags.length || task?.priority ? "mt-3" : ""}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">Comment</div>
-              <p className="mt-1 text-sm leading-snug text-[var(--text)]">{detailText}</p>
-            </div>
-          ) : null}
-        </div>
       ) : null}
     </article>
   );

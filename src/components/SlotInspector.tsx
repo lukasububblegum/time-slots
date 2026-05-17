@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, Minus, MoveRight, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowRightLeft, CalendarClock, CheckCircle2, MessageSquare, Minus, MoveRight, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { buildSlots, minutesToLabel } from "@/lib/scheduler";
 import type { AppSettings, Priority, ScheduleBlock, Task } from "@/lib/types";
 
@@ -139,8 +139,8 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
               onChange={(event) => setApplyToRepeats(event.target.checked)}
             />
             <span>
-              Apply these edits to {repeatGroupCount} matching weekly repeat
-              {repeatGroupCount === 1 ? "" : "s"}. Uncheck to edit only this block.
+              Apply these edits to {repeatGroupCount} linked block
+              {repeatGroupCount === 1 ? "" : "s"} in this repeat chain. Uncheck to edit only this block.
             </span>
           </label>
         ) : null}
@@ -249,6 +249,24 @@ export function SlotInspector({
             <dt className="text-xs uppercase text-[var(--muted)]">Duration</dt>
             <dd className="mt-1 font-medium">{selectedBlock.durationMinutes} minutes</dd>
           </div>
+          {blockTask?.priority ? (
+            <div>
+              <dt className="text-xs uppercase text-[var(--muted)]">Priority</dt>
+              <dd className="mt-2">
+                <span
+                  className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${
+                    blockTask.priority === "high"
+                      ? "border-[#e9a1af] bg-[#ffe3ea] text-[#a93149]"
+                      : blockTask.priority === "medium"
+                        ? "border-[#e8bd78] bg-[#fff0d8] text-[#8c5716]"
+                        : "border-[#b6cff4] bg-[#e6efff] text-[#3568ae]"
+                  }`}
+                >
+                  {blockTask.priority}
+                </span>
+              </dd>
+            </div>
+          ) : null}
           {blockTask?.tags.length ? (
             <div>
               <dt className="text-xs uppercase text-[var(--muted)]">Tags</dt>
@@ -258,6 +276,28 @@ export function SlotInspector({
                     {tag}
                   </span>
                 ))}
+              </dd>
+            </div>
+          ) : null}
+          {blockTask?.description ? (
+            <div>
+              <dt className="flex items-center gap-1 text-xs uppercase text-[var(--muted)]">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Task comment
+              </dt>
+              <dd className="mt-2 rounded-md border border-[var(--line)] bg-[var(--surface-muted)] p-3 leading-snug">
+                {blockTask.description}
+              </dd>
+            </div>
+          ) : null}
+          {selectedBlock.notes ? (
+            <div>
+              <dt className="flex items-center gap-1 text-xs uppercase text-[var(--muted)]">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Block note
+              </dt>
+              <dd className="mt-2 rounded-md border border-[var(--line)] bg-white p-3 leading-snug">
+                {selectedBlock.notes}
               </dd>
             </div>
           ) : null}
