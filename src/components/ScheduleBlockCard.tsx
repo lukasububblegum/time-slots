@@ -2,7 +2,7 @@ import { ArrowRightLeft, Check, CheckCircle2, Circle, GripVertical, MessageSquar
 import type { CSSProperties, PointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { getAbsolutePlacement, minutesToLabel } from "@/lib/scheduler";
-import type { AppSettings, ScheduleBlock, Task } from "@/lib/types";
+import type { AppSettings, Priority, ScheduleBlock, Task } from "@/lib/types";
 
 export interface BlockPointerDragStart {
   blockId: string;
@@ -24,6 +24,18 @@ interface ScheduleBlockCardProps {
   onToggleComplete: (blockId: string) => void;
   onPointerDragStart: (drag: BlockPointerDragStart) => void;
 }
+
+const priorityLabel: Record<Priority, string> = {
+  high: "High",
+  medium: "Med",
+  low: "Low",
+};
+
+const priorityTone: Record<Priority, string> = {
+  high: "border-[#e9a1af] bg-[#ffe3ea] text-[#a93149]",
+  medium: "border-[#e8bd78] bg-[#fff0d8] text-[#8c5716]",
+  low: "border-[#b6cff4] bg-[#e6efff] text-[#3568ae]",
+};
 
 export function ScheduleBlockCard({
   block,
@@ -79,9 +91,38 @@ export function ScheduleBlockCard({
     }
 
     const width = Math.min(Math.max(rect.width, 240), 340);
+    const gap = 10;
+    const margin = 12;
+    const estimatedHeight = Math.min(
+      260,
+      70 + tags.length * 22 + (detailText ? Math.ceil(detailText.length / 34) * 22 : 0),
+    );
+    const clampTop = (top: number) =>
+      Math.max(margin, Math.min(top, window.innerHeight - estimatedHeight - margin));
+
+    if (rect.right + gap + width <= window.innerWidth - margin) {
+      setDetailsStyle({
+        left: rect.right + gap,
+        top: clampTop(rect.top),
+        width,
+      });
+      return;
+    }
+
+    if (rect.left - gap - width >= margin) {
+      setDetailsStyle({
+        left: rect.left - gap - width,
+        top: clampTop(rect.top),
+        width,
+      });
+      return;
+    }
+
+    const hasMoreRoomAbove = rect.top > window.innerHeight - rect.bottom;
+    const verticalTop = hasMoreRoomAbove ? rect.top - estimatedHeight - gap : rect.bottom + gap;
     setDetailsStyle({
-      left: Math.min(rect.left, window.innerWidth - width - 12),
-      top: Math.min(rect.bottom + 6, window.innerHeight - 220),
+      left: Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin)),
+      top: clampTop(verticalTop),
       width,
     });
   };
@@ -223,7 +264,12 @@ export function ScheduleBlockCard({
         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 opacity-70" />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <span className={`truncate text-sm font-semibold ${isCompleted ? "line-through decoration-2" : ""}`}>
+            <span
+              className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+                isCompleted ? "line-through decoration-2" : ""
+              }`}
+              title={task?.title ?? "Missing task"}
+            >
               {task?.title ?? "Missing task"}
             </span>
             {isCompleted ? (
@@ -238,30 +284,6 @@ export function ScheduleBlockCard({
                 Done
               </span>
             ) : null}
-            {showMetadataButton ? (
-              <button
-                className={`inline-flex max-w-[8.5rem] shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
-                  isSelected
-                    ? "border-white/35 bg-white/18 text-white"
-                    : isCompleted
-                      ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
-                      : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
-                }`}
-                type="button"
-                aria-expanded={detailsOpen}
-                aria-label={`Show details for ${task?.title ?? "block"}`}
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleDetails();
-                }}
-              >
-                {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
-                <span className="truncate">{metadataLabel}</span>
-              </button>
-            ) : null}
           </div>
           <div
             className={
@@ -274,6 +296,41 @@ export function ScheduleBlockCard({
           >
             {minutesToLabel(block.startMinutes)} - {minutesToLabel(block.startMinutes + block.durationMinutes)}
           </div>
+          {task?.priority || showMetadataButton ? (
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+              {task?.priority ? (
+                <span
+                  className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] shadow-[0_1px_2px_rgba(36,49,59,0.10)] ${priorityTone[task.priority]}`}
+                >
+                  {priorityLabel[task.priority]}
+                </span>
+              ) : null}
+              {showMetadataButton ? (
+                <button
+                  className={`inline-flex max-w-[7.5rem] shrink items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-[0_1px_2px_rgba(36,49,59,0.06)] ${
+                    isSelected
+                      ? "border-white/35 bg-white/18 text-white"
+                      : isCompleted
+                        ? "border-[#aacdc1] bg-[#e6f6ef] text-[#2f6f61]"
+                        : "border-[#9fcfc3] bg-white/78 text-[var(--accent-strong)]"
+                  }`}
+                  type="button"
+                  aria-expanded={detailsOpen}
+                  aria-label={`Show details for ${task?.title ?? "block"}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleDetails();
+                  }}
+                >
+                  {tags.length ? <Tags className="h-3.5 w-3.5 shrink-0" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate">{metadataLabel}</span>
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {showInlineMetadata ? (
             <div ref={metadataRef} className="mt-1 flex min-w-0 flex-col gap-1">
               {tags.length ? (
@@ -362,7 +419,7 @@ export function ScheduleBlockCard({
       {detailsOpen && hasMetadata ? (
         <div
           ref={detailsRef}
-          className="fixed z-50 rounded-lg border border-[var(--line-strong)] bg-white p-3 text-[var(--text)] shadow-[0_18px_40px_rgba(36,49,59,0.18)]"
+          className="fixed z-50 max-h-[260px] overflow-y-auto rounded-lg border border-[var(--line-strong)] bg-white p-3 text-[var(--text)] shadow-[0_18px_40px_rgba(36,49,59,0.18)]"
           style={detailsStyle}
           onPointerDown={(event) => {
             event.stopPropagation();

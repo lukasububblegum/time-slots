@@ -91,16 +91,24 @@ export const isWeeklyRepeatMatch = (
     return false;
   }
 
-  if (
-    candidate.taskId !== source.taskId ||
-    candidate.startMinutes !== source.startMinutes ||
-    candidate.durationMinutes !== source.durationMinutes
-  ) {
+  const sourceGroupId = source.repeatGroupId ?? source.id;
+  const hasLineage = Boolean(source.repeatGroupId || candidate.repeatGroupId);
+  const dayDiff = daysBetween(source.date, candidate.date);
+
+  if (hasLineage) {
+    const isLineageMatch = candidate.repeatGroupId === sourceGroupId || candidate.id === sourceGroupId;
+    return options.futureOnly ? isLineageMatch && dayDiff > 0 : isLineageMatch;
+  }
+
+  const isWeeklyOffset = options.futureOnly
+    ? dayDiff > 0 && dayDiff % 7 === 0
+    : dayDiff !== 0 && dayDiff % 7 === 0;
+
+  if (!isWeeklyOffset) {
     return false;
   }
 
-  const dayDiff = daysBetween(source.date, candidate.date);
-  return options.futureOnly ? dayDiff > 0 && dayDiff % 7 === 0 : dayDiff !== 0 && dayDiff % 7 === 0;
+  return candidate.taskId === source.taskId;
 };
 
 export const getWeeklyRepeatGroup = (

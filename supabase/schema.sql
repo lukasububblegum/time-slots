@@ -19,6 +19,7 @@ create table if not exists public.schedule_blocks (
   user_id uuid not null references auth.users (id) on delete cascade,
   id uuid not null,
   task_id uuid not null,
+  repeat_group_id uuid,
   date date not null,
   start_minutes integer not null check (start_minutes >= 0 and start_minutes < 1440),
   duration_minutes integer not null check (duration_minutes > 0),
@@ -30,6 +31,9 @@ create table if not exists public.schedule_blocks (
   device_updated_at timestamptz not null,
   primary key (user_id, id)
 );
+
+alter table public.schedule_blocks
+  add column if not exists repeat_group_id uuid;
 
 create table if not exists public.settings (
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -47,6 +51,7 @@ create index if not exists tasks_user_updated_idx on public.tasks (user_id, upda
 create index if not exists tasks_user_deleted_idx on public.tasks (user_id, deleted_at) where deleted_at is not null;
 create index if not exists schedule_blocks_user_updated_idx on public.schedule_blocks (user_id, updated_at desc);
 create index if not exists schedule_blocks_user_date_idx on public.schedule_blocks (user_id, date);
+create index if not exists schedule_blocks_user_repeat_group_idx on public.schedule_blocks (user_id, repeat_group_id) where repeat_group_id is not null;
 create index if not exists schedule_blocks_user_deleted_idx on public.schedule_blocks (user_id, deleted_at) where deleted_at is not null;
 
 alter table public.tasks enable row level security;

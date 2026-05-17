@@ -96,12 +96,12 @@ export function AppShell() {
   const selectedBlockTask = selectedBlock
     ? tasks.find((task) => task.id === selectedBlock.taskId)
     : undefined;
-  const selectedBlockFutureRepeatCount = useMemo(() => {
+  const selectedBlockLinkedRepeatCount = useMemo(() => {
     if (!selectedBlock) {
       return 0;
     }
 
-    return getWeeklyRepeatGroup(selectedBlock, blocks, { futureOnly: true }).length;
+    return getWeeklyRepeatGroup(selectedBlock, blocks).length;
   }, [blocks, selectedBlock]);
   const selectedBlockRepeatGroupCount = useMemo(() => {
     if (!selectedBlock) {
@@ -410,7 +410,7 @@ export function AppShell() {
               selectedTask={selectedTask}
               selectedBlock={selectedBlock}
               blockTask={selectedBlockTask}
-              futureRepeatCount={selectedBlockFutureRepeatCount}
+              futureRepeatCount={selectedBlockLinkedRepeatCount}
               repeatGroupCount={selectedBlockRepeatGroupCount}
               activeDate={selectedDate}
               settings={settings}

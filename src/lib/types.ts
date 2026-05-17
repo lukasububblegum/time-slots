@@ -20,6 +20,7 @@ export interface Task {
 export interface ScheduleBlock {
   id: string;
   taskId: string;
+  repeatGroupId?: string;
   date: string;
   startMinutes: number;
   durationMinutes: number;

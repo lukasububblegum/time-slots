@@ -51,6 +51,7 @@ type ScheduleBlockRow = {
   id: string;
   user_id: string;
   task_id: string;
+  repeat_group_id: string | null;
   date: string;
   start_minutes: number;
   duration_minutes: number;
@@ -146,6 +147,7 @@ function toBlockRow(block: ScheduleBlock, userId: string): ScheduleBlockRow {
     id: block.id,
     user_id: userId,
     task_id: block.taskId,
+    repeat_group_id: block.repeatGroupId ?? null,
     date: block.date,
     start_minutes: block.startMinutes,
     duration_minutes: block.durationMinutes,
@@ -162,6 +164,7 @@ function fromBlockRow(row: ScheduleBlockRow): ScheduleBlock {
   return {
     id: row.id,
     taskId: row.task_id,
+    repeatGroupId: row.repeat_group_id ?? undefined,
     date: row.date,
     startMinutes: row.start_minutes,
     durationMinutes: row.duration_minutes,

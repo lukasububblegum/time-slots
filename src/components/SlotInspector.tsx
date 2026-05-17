@@ -401,8 +401,8 @@ export function SlotInspector({
               type="checkbox"
             />
             <span>
-              Also delete {futureRepeatCount} future weekly repeat
-              {futureRepeatCount === 1 ? "" : "s"} with the same task and time.
+              Also delete {futureRepeatCount} linked weekly repeat
+              {futureRepeatCount === 1 ? "" : "s"} in this repeat chain.
             </span>
           </label>
         ) : null}

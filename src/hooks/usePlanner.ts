@@ -367,7 +367,7 @@ export function usePlanner() {
     }
 
     const blocksToDelete = options.deleteFutureRepeats
-      ? [block, ...getWeeklyRepeatGroup(block, allBlocks, { futureOnly: true })]
+      ? [block, ...getWeeklyRepeatGroup(block, allBlocks)]
       : [block];
     const timestamp = new Date().toISOString();
 
@@ -393,15 +393,26 @@ export function usePlanner() {
     const weeks = Math.max(1, Math.min(52, Math.floor(repeatWeeks)));
     const existingAndPlanned = allBlocks.slice();
     const blocksToCreate: ScheduleBlock[] = [];
+    const repeatGroupId = source.repeatGroupId ?? source.id;
+    const sourceWithGroup = source.repeatGroupId
+      ? source
+      : touch({
+          ...source,
+          repeatGroupId,
+        });
     let skipped = 0;
 
     for (let week = 1; week <= weeks; week += 1) {
-      const candidate = makeScheduleBlock({
-        taskId: source.taskId,
-        date: addDays(source.date, week * 7),
-        startMinutes: source.startMinutes,
-        durationMinutes: source.durationMinutes,
-      });
+      const candidate = {
+        ...makeScheduleBlock({
+          taskId: source.taskId,
+          date: addDays(source.date, week * 7),
+          startMinutes: source.startMinutes,
+          durationMinutes: source.durationMinutes,
+        }),
+        notes: source.notes,
+        repeatGroupId,
+      };
 
       if (!isInsideDay(candidate, appSettings)) {
         skipped += 1;
@@ -425,7 +436,7 @@ export function usePlanner() {
       };
     }
 
-    await db.scheduleBlocks.bulkPut(blocksToCreate);
+    await db.scheduleBlocks.bulkPut(source.repeatGroupId ? blocksToCreate : [sourceWithGroup, ...blocksToCreate]);
     return {
       ok: true,
       created: blocksToCreate.length,
