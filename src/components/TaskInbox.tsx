@@ -1,4 +1,5 @@
 import { Clock, GripVertical, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { TaskComposer, type TaskComposerInput } from "@/components/TaskComposer";
 import type { Priority, Task } from "@/lib/types";
 
@@ -7,6 +8,8 @@ const priorityClass: Record<Priority, string> = {
   medium: "bg-[var(--amber-soft)] text-[var(--amber)]",
   low: "bg-[var(--blue-soft)] text-[var(--blue)]",
 };
+
+type TaskSortMode = "createdAt" | "title";
 
 interface TaskInboxProps {
   tasks: Task[];
@@ -23,21 +26,53 @@ export function TaskInbox({
   onDeleteTask,
   selectedTaskId,
 }: TaskInboxProps) {
+  const [sortMode, setSortMode] = useState<TaskSortMode>("createdAt");
+  const sortedTasks = useMemo(
+    () =>
+      tasks.toSorted((first, second) => {
+        if (sortMode === "title") {
+          return first.title.localeCompare(second.title, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+        }
+
+        return Date.parse(second.createdAt) - Date.parse(first.createdAt);
+      }),
+    [sortMode, tasks],
+  );
+
   return (
     <aside className="flex min-h-0 flex-col gap-3">
       <TaskComposer onCreate={onCreate} />
       <section className="min-h-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-sm">
         <div className="border-b border-[var(--line)] px-4 py-3">
-          <h2 className="text-sm font-semibold">Unscheduled</h2>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">Drag a task into the calendar.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Unscheduled</h2>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">Drag a task into the calendar.</p>
+            </div>
+            <label className="grid gap-1 text-[10px] font-semibold uppercase text-[var(--muted)]">
+              Sort
+              <select
+                className="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs font-medium normal-case text-[var(--text)]"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as TaskSortMode)}
+                aria-label="Sort unscheduled tasks"
+              >
+                <option value="createdAt">Added time</option>
+                <option value="title">Name</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div className="flex max-h-[calc(100vh-22rem)] min-h-48 flex-col gap-2 overflow-auto p-3">
-          {tasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[var(--line-strong)] px-3 py-6 text-center text-sm text-[var(--muted)]">
               Every task is scheduled.
             </div>
           ) : null}
-          {tasks.map((task) => (
+          {sortedTasks.map((task) => (
             <article
               key={task.id}
               draggable
