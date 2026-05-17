@@ -29,9 +29,6 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
   const [tags, setTags] = useState(tagText);
   const [blockNotes, setBlockNotes] = useState(block?.notes ?? "");
   const [applyToRepeats, setApplyToRepeats] = useState(Boolean(block && repeatGroupCount));
-  const durationOptions = defaultDurationOptions.includes(task.estimatedMinutes)
-    ? defaultDurationOptions
-    : [...defaultDurationOptions, task.estimatedMinutes].sort((a, b) => a - b);
 
   useEffect(() => {
     setTitle(task.title);
@@ -116,7 +113,7 @@ function TaskInfoEditor({ task, block, repeatGroupCount = 0, onSave }: TaskInfoE
               onChange={(event) => setEstimatedMinutes(Number(event.target.value))}
               aria-label="Estimated duration"
             >
-              {durationOptions.map((minutes) => (
+              {defaultDurationOptions.map((minutes) => (
                 <option key={minutes} value={minutes}>
                   {minutes} min
                 </option>
