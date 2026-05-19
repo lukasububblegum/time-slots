@@ -61,6 +61,18 @@ export function usePlanner() {
     await db.tasks.put(touch({ ...task, ...patch }));
   };
 
+  const updateDefaultView = async (defaultView: AppSettings["defaultView"]) => {
+    const currentSettings = (await db.settings.get("local")) ?? DEFAULT_SETTINGS;
+    if (currentSettings.defaultView === defaultView) {
+      return;
+    }
+
+    await db.settings.put({
+      ...currentSettings,
+      defaultView,
+    });
+  };
+
   const updateBlockInfo = async (
     blockId: string,
     taskPatch: TaskInfoPatch,
@@ -453,6 +465,7 @@ export function usePlanner() {
     settings,
     createTask,
     updateTask,
+    updateDefaultView,
     updateBlockInfo,
     toggleBlockCompleted,
     deleteTask,

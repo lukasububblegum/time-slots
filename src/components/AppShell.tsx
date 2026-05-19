@@ -22,6 +22,7 @@ export function AppShell() {
     settings,
     createTask,
     updateTask,
+    updateDefaultView,
     updateBlockInfo,
     deleteTask,
     toggleBlockCompleted,
@@ -81,6 +82,11 @@ export function AppShell() {
   useEffect(() => {
     setView(settings.defaultView);
   }, [settings.defaultView]);
+
+  const handleViewChange = (nextView: CalendarView) => {
+    setView(nextView);
+    void updateDefaultView(nextView);
+  };
 
   const scheduledTaskIds = useMemo(
     () => new Set(blocks.map((block) => block.taskId)),
@@ -343,7 +349,7 @@ export function AppShell() {
         date={selectedDate}
         view={view}
         onDateChange={setSelectedDate}
-        onViewChange={setView}
+        onViewChange={handleViewChange}
         onJumpToToday={() => setSelectedDate(dateKey(new Date()))}
         scheduleOnly={scheduleOnly}
         onScheduleOnlyChange={setScheduleOnly}
